@@ -5,7 +5,7 @@
 //! - JSON: JSON extract
 use std::collections::HashMap;
 
-use client_side_prover::supernova::snark::{CompressedSNARK, VerifierKey};
+use edge_prover::supernova::snark::{CompressedSNARK, VerifierKey};
 use proofs::{
   circuits::{construct_setup_data_from_fs, PROVING_PARAMS_512},
   program::data::{CircuitData, Offline, Online, SetupParams},

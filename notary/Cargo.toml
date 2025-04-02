@@ -14,7 +14,7 @@ tlsn-core  ={ workspace=true }
 tlsn-common={ workspace=true }
 chrono     ={ workspace=true }
 
-client-side-prover={ git="https://github.com/pluto/client-side-prover", rev="8e7eb839e901dcee416179116bb0f9c4f7ae683c" }
+edge-frontend={ git="https://github.com/pluto/edge.git", rev="cb2c3b5df4cabe7e7bd150f0a5de51669f8409db"}
 proofs={ workspace=true }
 client={ workspace=true }
 web-prover-core={ workspace=true }

@@ -23,7 +23,7 @@
 
 use std::io::Cursor;
 
-use client_side_prover::{
+use edge_prover::{
   fast_serde::{self, FastSerde, SerdeByteError, SerdeByteTypes},
   supernova::snark::CompressedSNARK,
   traits::{Dual, Engine},
@@ -47,7 +47,7 @@ pub struct ProvingParams {
 
 impl FastSerde for ProvingParams {
   /// Initialize ProvingParams from an efficiently serializable data format.
-  fn from_bytes(bytes: &Vec<u8>) -> Result<Self, SerdeByteError> {
+  fn from_bytes(bytes: &[u8]) -> Result<Self, SerdeByteError> {
     let mut cursor = Cursor::new(bytes);
     Self::validate_header(&mut cursor, SerdeByteTypes::ProverParams, 3)?;
 
@@ -86,7 +86,7 @@ impl FastSerde for ProvingParams {
 
 impl ProvingParams {
   /// Method used externally to initialize all the backend data needed to create a verifiable proof
-  /// with [`client_side_prover`] and `proofs` crate. Intended to be used in combination with setup,
+  /// with [`edge_prover`] and `proofs` crate. Intended to be used in combination with setup,
   /// which creates these values offline to be loaded at or before proof creation or verification.
   ///
   /// # Arguments

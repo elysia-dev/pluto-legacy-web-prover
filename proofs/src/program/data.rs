@@ -13,7 +13,7 @@ use std::{
   sync::Arc,
 };
 
-use client_side_prover::{fast_serde::FastSerde, supernova::get_circuit_shapes};
+use edge_prover::{fast_serde::FastSerde, supernova::get_circuit_shapes};
 use serde_json::json;
 
 use super::*;

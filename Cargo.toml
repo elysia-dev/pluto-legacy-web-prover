@@ -70,6 +70,11 @@ chrono     ="0.4"
 
 tracing-test="0.2"
 
+# rand 0.9.0 released January 27th has breaking changes since the 0.8 series
+# https://github.com/lurk-lab/grumpkin-msm/pull/15
+rand = "0.8.5"
+rand_chacha = "0.3.1"
+
 [profile.dev]
 opt-level      =1
 split-debuginfo="unpacked"

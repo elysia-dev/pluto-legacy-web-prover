@@ -10,7 +10,7 @@ use circuits::{
   JSON_EXTRACTION_512B_R1CS, MAX_STACK_HEIGHT, PLAINTEXT_AUTHENTICATION_512B_GRAPH,
   PLAINTEXT_AUTHENTICATION_512B_R1CS,
 };
-use client_side_prover::supernova::RecursiveSNARK;
+use edge_prover::supernova::RecursiveSNARK;
 use inputs::{
   complex_manifest, complex_request_inputs, complex_response_inputs, simple_request_inputs,
   simple_response_inputs,

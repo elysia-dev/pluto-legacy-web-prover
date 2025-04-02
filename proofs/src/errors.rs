@@ -81,9 +81,9 @@ pub enum ProofError {
   #[error(transparent)]
   Bincode(#[from] bincode::ErrorKind),
 
-  /// The error is a client_side_prover::supernova::error::SuperNovaError
+  /// The error is a edge_prover::supernova::error::SuperNovaError
   #[error(transparent)]
-  SuperNova(#[from] client_side_prover::supernova::error::SuperNovaError),
+  SuperNova(#[from] edge_prover::supernova::error::SuperNovaError),
 
   /// The error is a json key error
   #[error("json key not found: {0}")]

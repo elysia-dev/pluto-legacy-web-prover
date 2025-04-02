@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use client_side_prover::supernova::PublicParams;
+use edge_prover::supernova::PublicParams;
 use proofs::{
   program::{
     data::{InitializedSetup, InstanceParams, NotExpanded, Online, ProofParams, SetupParams},
