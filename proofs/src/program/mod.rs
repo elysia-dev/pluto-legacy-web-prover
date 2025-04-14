@@ -32,6 +32,8 @@ use crate::{
   },
 };
 
+pub mod noir;
+
 pub mod data;
 pub mod manifest;
 pub mod utils;

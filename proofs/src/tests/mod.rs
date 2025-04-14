@@ -4,7 +4,9 @@
 // TODO: (Colin): I'm noticing this module could use some TLC. There's a lot of lint here!
 
 use std::sync::Arc;
-
+use edge_frontend::program::{Configuration, RAM, Switchboard, Z0_SECONDARY};
+use edge_frontend::Scalar;
+use edge_frontend::setup::Setup;
 use circuits::{
   HTTP_VERIFICATION_512B_GRAPH, HTTP_VERIFICATION_512B_R1CS, JSON_EXTRACTION_512B_GRAPH,
   JSON_EXTRACTION_512B_R1CS, MAX_STACK_HEIGHT, PLAINTEXT_AUTHENTICATION_512B_GRAPH,
@@ -26,6 +28,7 @@ use crate::{
     manifest::{InitialNIVCInputs, NIVCRom, NivcCircuitInputs, OrigoManifest},
   },
 };
+use crate::program::noir::initialize_circuit_list;
 
 pub(crate) mod inputs;
 mod witnesscalc;
@@ -127,6 +130,61 @@ fn wasm_witness_generator_type_256b() -> [WitnessGeneratorType; 3] {
       wtns_path: String::from("je.wtns"),
     },
   ]
+}
+
+#[tokio::test]
+// #[tracing_test::traced_test]
+async fn test_end_to_end_proofs_collatz_even_odd() {
+  // Step 1: Create demo programs
+  let noir_program_paths = vec!["../target/collatz_even.json", "../target/collatz_odd.json"];
+  let noir_programs = initialize_circuit_list(&noir_program_paths);
+  let input = 42;
+
+  // Step 2: Create and prepare the switchboard for proving
+  let program_index = (input % 2) as usize;
+  debug!(
+    "Using program index: {} ({})",
+    program_index,
+    if program_index == 0 { "even" } else { "odd" }
+  );
+
+  // Step 2: Create switchboard
+  let switchboard = Switchboard::<RAM>::new(
+    noir_programs,
+    vec![Scalar::from(input)],
+    program_index,
+  );
+  info!("✅ Created switchboard");
+  debug!("Switchboard details: {:?}", switchboard);
+
+  // Step 3: Initialize the setup
+  let setup = Setup::new(switchboard).unwrap();
+  info!("✅ Initialized setup");
+  debug!("Setup details: {:?}", setup);
+
+  // Prove
+  let recursive_snark = program::noir::run(&setup).await.unwrap();
+  let compressed_proof = program::noir::compress(&setup, &recursive_snark).unwrap();
+
+  // Verify
+  let path = std::path::PathBuf::from("../target/setup.bytes");
+  let vsetup = Setup::load_file(&path).unwrap();
+  let noir_programs = initialize_circuit_list(&noir_program_paths);
+  let vswitchboard = Switchboard::<Configuration>::new(noir_programs);
+  let vsetup = vsetup.into_ready(vswitchboard);
+
+  let vk = vsetup.verifier_key().unwrap();
+  info!("✅ Prepared verification key");
+  // debug!("Verifier key details: {:?}", vk);
+
+  let z0_primary = [Scalar::from(input)];
+  debug!("z0_primary: {:?}", z0_primary);
+  debug!("z0_secondary: {:?}", Z0_SECONDARY);
+  let (zn_primary, zn_secondary) = compressed_proof.verify(&vsetup.params, &vk, &z0_primary, Z0_SECONDARY).unwrap();
+
+  debug!("zn_primary: {:?}", zn_primary);
+  // TODO
+  // assert_eq!(zn_primary[0], *value_digest);
 }
 
 #[tokio::test]
