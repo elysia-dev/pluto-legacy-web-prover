@@ -164,7 +164,7 @@ async fn test_end_to_end_proofs_collatz_even_odd() {
 
   // Prove
   let recursive_snark = program::noir::run(&setup).await.unwrap();
-  let compressed_proof = program::noir::compress(&setup, &recursive_snark).unwrap();
+  let compressed_proof = program::noir::compress_proof(&setup, &recursive_snark).unwrap();
 
   // Verify
   let path = std::path::PathBuf::from("../target/setup.bytes");
@@ -180,7 +180,7 @@ async fn test_end_to_end_proofs_collatz_even_odd() {
   let z0_primary = [Scalar::from(input)];
   debug!("z0_primary: {:?}", z0_primary);
   debug!("z0_secondary: {:?}", Z0_SECONDARY);
-  let (zn_primary, zn_secondary) = compressed_proof.verify(&vsetup.params, &vk, &z0_primary, Z0_SECONDARY).unwrap();
+  let (zn_primary, zn_secondary) = compressed_proof.proof.verify(&vsetup.params, &vk, &z0_primary, Z0_SECONDARY).unwrap();
 
   debug!("zn_primary: {:?}", zn_primary);
   // TODO

@@ -5,7 +5,6 @@ use edge_frontend::setup::{Ready, Setup};
 use edge_frontend::CompressedSNARK;
 use super::*;
 
-// FIXME: psetup input must be online
 pub async fn run<M: Memory>(
   psetup: &Setup<Ready<M>>,
 ) -> Result<RecursiveSNARK<E1>, FrontendError> {
@@ -13,15 +12,47 @@ pub async fn run<M: Memory>(
   Ok(recursive_snark)
 }
 
-pub fn compress<M: Memory>(
+
+/// # Returns
+/// verifier_digest is pk_primary.vk_digest
+/// https://github.com/ModoriLabs/pluto-legacy-web-prover/blob/feat/use-edge/proofs/src/program/mod.rs#L322
+pub fn compress_proof<M: Memory>(
   setup: &Setup<Ready<M>>,
   recursive_snark: &RecursiveSNARK<E1>,
-) -> Result<CompressedSNARK, FrontendError> {
-  let compressed_snark = compress_noir(setup, recursive_snark)?;
-  Ok(compressed_snark)
+) -> Result<CompressedProof, FrontendError> {
+  let proof = FoldingProof {
+    proof:           compress_noir(setup, recursive_snark)?,
+    verifier_digest: setup.vk_digest_primary,
+  };
+  Ok(proof)
 }
 
-// paths: "target/collatz_even.json"
+pub fn compress_proof_no_setup<M: Memory>(
+  recursive_snark: &RecursiveSNARK<E1>,
+  public_params: &PublicParams<E1>,
+  vk_digest_primary: <E1 as Engine>::Scalar,
+  vk_digest_secondary: <Dual<E1> as Engine>::Scalar,
+) -> Result<CompressedProof, FrontendError> {
+  let pk = CompressedSNARK::initialize_pk(
+    public_params,
+    vk_digest_primary,
+    vk_digest_secondary,
+  )?;
+  debug!(
+    "initialized pk pk_primary.digest={:?}, pk_secondary.digest={:?}",
+    pk.pk_primary.vk_digest, pk.pk_secondary.vk_digest
+  );
+
+  debug!("`CompressedSNARK::prove STARTING PROVING!");
+  let proof = FoldingProof {
+    proof:           CompressedSNARK::prove(public_params, &pk, recursive_snark)?,
+    verifier_digest: pk.pk_primary.vk_digest,
+  };
+  debug!("`CompressedSNARK::prove completed!");
+
+  Ok(proof)
+}
+
 pub fn initialize_circuit_list(paths: &Vec<&str>) -> Vec<NoirProgram> {
   paths
     .iter()
