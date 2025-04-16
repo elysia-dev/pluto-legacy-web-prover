@@ -11,6 +11,7 @@ pub mod origo;
 pub mod config;
 pub mod errors;
 mod proof;
+mod noir_proof;
 mod tls;
 
 pub mod tls_client_async2;
