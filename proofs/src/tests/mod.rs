@@ -4,7 +4,8 @@
 // TODO: (Colin): I'm noticing this module could use some TLC. There's a lot of lint here!
 
 use std::sync::Arc;
-use edge_frontend::program::{Configuration, RAM, Switchboard, Z0_SECONDARY};
+use edge_frontend::noir::{GenericFieldElement, InputMap, InputValue};
+use edge_frontend::program::{Configuration, RAM, Switchboard, Z0_SECONDARY, ROM};
 use edge_frontend::Scalar;
 use edge_frontend::setup::Setup;
 use circuits::{
@@ -13,6 +14,7 @@ use circuits::{
   PLAINTEXT_AUTHENTICATION_512B_R1CS,
 };
 use edge_prover::supernova::RecursiveSNARK;
+use halo2curves::grumpkin;
 use inputs::{
   complex_manifest, complex_request_inputs, complex_response_inputs, simple_request_inputs,
   simple_response_inputs,
@@ -133,8 +135,75 @@ fn wasm_witness_generator_type_256b() -> [WitnessGeneratorType; 3] {
 }
 
 #[tokio::test]
+#[tracing_test::traced_test]
+async fn test_end_to_end_proofs_rom() {
+  let noir_program_paths = vec!["../target/add_external.json", "../target/square_zeroth.json", "../target/swap_memory.json"];
+  let noir_programs = initialize_circuit_list(&noir_program_paths);
+
+  let switchboard_inputs = vec![
+    InputMap::from([
+      ("next_pc".to_string(), InputValue::Field(GenericFieldElement::from(1_u64))),
+      (
+        "external".to_string(),
+        InputValue::Vec(vec![
+          InputValue::Field(GenericFieldElement::from(5_u64)),
+          InputValue::Field(GenericFieldElement::from(7_u64)),
+        ]),
+      ),
+    ]),
+    InputMap::from([("next_pc".to_string(), InputValue::Field(GenericFieldElement::from(2_u64)))]),
+    // The next_pc input of swap_memory is -1.
+    InputMap::from([(
+      "next_pc".to_string(),
+      InputValue::Field(GenericFieldElement::from(-1_i128)),
+    )]),
+  ];
+  let initial_circuit_index = 0;
+  let public_input = vec![Scalar::from(1), Scalar::from(2)];
+  let switchboard = Switchboard::<ROM>::new(
+    noir_programs,
+    switchboard_inputs,
+    public_input,
+    initial_circuit_index,
+  );
+  let setup = Setup::new(switchboard).unwrap();
+
+  let recursive_snark = program::noir::run(&setup).await.unwrap();
+  let zi_primary = recursive_snark.zi_primary();
+  let zi_secondary = recursive_snark.zi_secondary();
+  // reg0: 1 + 5 = 6
+  // reg1: 2 + 7 = 9
+  // reg0: 36
+  // reg1: 9
+  // reg0: 9
+  // reg1: 36
+  assert_eq!(zi_primary[0], Scalar::from(9));
+  assert_eq!(zi_primary[1], Scalar::from(36));
+  assert_eq!(zi_secondary[0], grumpkin::Fr::from(0));
+
+  let compressed_proof = program::noir::compress_proof(&setup, &recursive_snark).unwrap();
+
+  // Verify
+  let path = std::path::PathBuf::from("../target/setup.bytes");
+  let vsetup = Setup::load_file(&path).unwrap();
+  let noir_programs = initialize_circuit_list(&noir_program_paths);
+  let vswitchboard = Switchboard::<Configuration>::new(noir_programs);
+  let vsetup = vsetup.into_ready(vswitchboard);
+  let vk = vsetup.verifier_key().unwrap();
+
+  let z0_primary = [Scalar::from(1), Scalar::from(2)];
+  debug!("z0_primary: {:?}", z0_primary);
+  debug!("z0_secondary: {:?}", Z0_SECONDARY);
+
+  let (zn_primary, zn_secondary) = compressed_proof.proof.verify(&vsetup.params, &vk, &z0_primary, Z0_SECONDARY).unwrap();
+
+  assert_eq!(zn_primary[0], Scalar::from(9));
+  assert_eq!(zn_primary[1], Scalar::from(36));
+}
+
+#[tokio::test]
 // #[tracing_test::traced_test]
-async fn test_end_to_end_proofs_collatz_even_odd() {
+async fn test_end_to_end_proofs_ram() {
   // Step 1: Create demo programs
   let noir_program_paths = vec!["../target/collatz_even.json", "../target/collatz_odd.json"];
   let noir_programs = initialize_circuit_list(&noir_program_paths);

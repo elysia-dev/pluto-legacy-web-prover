@@ -1,6 +1,7 @@
 use std::sync::Arc;
-
+use edge_frontend::noir::{GenericFieldElement, InputMap, InputValue};
 use edge_frontend::program::{Configuration, ROM, Switchboard, Z0_SECONDARY};
+use edge_frontend::Scalar;
 use edge_frontend::setup::Setup;
 use edge_prover::supernova::PublicParams;
 use proofs::{program, program::{
@@ -29,17 +30,34 @@ pub async fn construct_program_data_and_proof<const CIRCUIT_SIZE: usize>(
         manifest.build_rom::<CIRCUIT_SIZE>(request_inputs, response_inputs);
 
     // FIXME: use paths from NIVCRom
-    let noir_program_paths = vec!["../target/collatz_even.json", "../target/collatz_odd.json"];
+    let noir_program_paths = vec!["../target/add_external.json", "../target/square_zeroth.json", "../target/swap_memory.json"];
     let noir_programs = initialize_circuit_list(&noir_program_paths);
 
-    // rom is Vec<string>
-    // switchboard_inputs: Vec<InputMap> - Sequence of inputs for each execution step
-    //  public_input: Vec<Scalar>,
-    // initial_circuit_index
+    let switchboard_inputs = vec![
+      InputMap::from([
+        ("next_pc".to_string(), InputValue::Field(GenericFieldElement::from(1_u64))),
+        (
+          "external".to_string(),
+          InputValue::Vec(vec![
+            InputValue::Field(GenericFieldElement::from(5_u64)),
+            InputValue::Field(GenericFieldElement::from(7_u64)),
+          ]),
+        ),
+      ]),
+      InputMap::from([("next_pc".to_string(), InputValue::Field(GenericFieldElement::from(2_u64)))]),
+      // The next_pc input of swap_memory is -1.
+      InputMap::from([(
+        "next_pc".to_string(),
+        InputValue::Field(GenericFieldElement::from(-1_i128)),
+      )]),
+    ];
+    let initial_circuit_index = 0;
     let switchboard = Switchboard::<ROM>::new(
-        noir_programs,
+      noir_programs,
+      switchboard_inputs,
+      vec![Scalar::from(1), Scalar::from(2)],
+      initial_circuit_index,
     );
-
     let setup = Setup::new(switchboard).unwrap();
 
     let recursive_snark = program::noir::run(&setup).await.unwrap();

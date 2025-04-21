@@ -12,7 +12,6 @@ pub async fn run<M: Memory>(
   Ok(recursive_snark)
 }
 
-
 /// # Returns
 /// verifier_digest is pk_primary.vk_digest
 /// https://github.com/ModoriLabs/pluto-legacy-web-prover/blob/feat/use-edge/proofs/src/program/mod.rs#L322
