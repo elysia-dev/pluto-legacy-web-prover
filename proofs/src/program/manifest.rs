@@ -26,10 +26,11 @@
 //!    "JSON_EXTRACTION": 2
 //! }
 
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 
 use derive_more::From;
-use ff::Field;
+use edge_frontend::noir::{GenericFieldElement, InputMap, InputValue};
+use ff::{Field};
 use num_bigint::BigInt;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
@@ -237,6 +238,151 @@ impl OrigoManifest {
     )?;
 
     Ok(NivcCircuitInputs { private_inputs, fold_inputs, initial_nivc_input })
+  }
+
+  pub fn build_switchboard_inputs<const CIRCUIT_SIZE: usize>(
+    &self,
+    request_inputs: &EncryptionInput,
+    response_inputs: &EncryptionInput,
+    rom_data: &HashMap<String, CircuitData>,
+    rom: &Vec<String>,
+  ) -> Result<(Vec<BTreeMap<String, InputValue>>, [F<G1>; PUBLIC_IO_VARS]), ProofError> {
+    let mut switchboard_inputs = vec![];
+
+    // TODO: self.initial_inputs is duplicate with construct_program_data_and_proof
+    let InitialNIVCInputs { ciphertext_digest, initial_nivc_input, headers_digest } =
+      self.initial_inputs::<MAX_STACK_HEIGHT, CIRCUIT_SIZE>(
+        &request_inputs.ciphertext,
+        &response_inputs.ciphertext,
+      )?;
+
+    for (i, circuit_name) in rom.iter().enumerate() {
+      let next_pc = if i < rom.len() - 1 {
+        rom_data[&rom[i + 1]].opcode as i128
+      } else {
+        // If the last entry, use -1 to indicate termination
+        -1_i128
+      };
+
+      let _ = Self::build_plaintext_authentication_circuit_inputs_noir::<CIRCUIT_SIZE>(
+        request_inputs,
+        ciphertext_digest,
+        &mut switchboard_inputs,
+      )?;
+
+      if circuit_name.contains("PLAINTEXT_AUTHENTICATION") {
+        let mut input_map = InputMap::from([
+          ("next_pc".to_string(), InputValue::Field(GenericFieldElement::from(next_pc))),
+        ]);
+
+        switchboard_inputs.push(input_map);
+      } else if circuit_name.contains("HTTP_VERIFICATION") {
+        // TODO:
+        switchboard_inputs.push(
+          InputMap::from([
+            ("next_pc".to_string(), InputValue::Field(GenericFieldElement::from(next_pc))),
+          ])
+        );
+      } else if circuit_name.contains("JSON_EXTRACTION") {
+        // TODO:
+      }
+    }
+
+    Ok((switchboard_inputs, initial_nivc_input))
+  }
+
+  fn build_plaintext_authentication_circuit_inputs_noir<const CIRCUIT_SIZE: usize>(
+    inputs: &EncryptionInput,
+    polynomial_input: F<G1>,
+    switchboard_inputs: &mut Vec<BTreeMap<String, InputValue>>,
+  ) -> Result<F<G1>, ProofError> {
+    let mut plaintext_step_out = F::<G1>::ZERO;
+
+    let key = inputs.key.as_ref();
+    debug!("key: {:?}", key);
+    debug!("iv: {:?}", inputs.iv);
+    debug!("seq: {:?}", inputs.seq);
+    debug!("aad: {:?}", inputs.aad);
+    debug!("plaintext: {:?}", inputs.plaintext);
+    debug!("ciphertext: {:?}", inputs.ciphertext);
+    assert_eq!(key.len(), 32, "Only CHACHA20POLY1305 is supported for now");
+
+    let counter_step = CIRCUIT_SIZE / 64; // 512 bytes
+
+    let mut curr_plaintext_index = 0;
+    let mut prev_ciphertext_digest = F::<G1>::ZERO;
+    for (plaintext_circuit_counter, (pt, ct)) in
+      inputs.plaintext.iter().zip(inputs.ciphertext.iter()).enumerate()
+    {
+      // assert!(pt.len() <= CIRCUIT_SIZE, "Plaintext is larger than circuit size");
+      assert_eq!(pt.len(), ct.len(), "Plaintext and ciphertext length mismatch");
+
+      let padded_plaintext = ByteOrPad::pad_to_nearest_multiple(pt, CIRCUIT_SIZE);
+      let nonce = make_nonce(inputs.iv, inputs.seq + plaintext_circuit_counter as u64);
+
+      // CHACHA rom opcode with private inputs
+
+      // add fold inputs
+      // let circuit_label =
+      //   format!("PLAINTEXT_AUTHENTICATION_{}", inputs.seq + plaintext_circuit_counter as u64);
+
+      let pt_chunks = padded_plaintext.chunks(CIRCUIT_SIZE)
+        .map(|chunk| chunk
+          .iter()
+          .map(|x| match x {
+            ByteOrPad::Byte(b) => InputValue::Field(GenericFieldElement::from(*b as u32)),
+            ByteOrPad::Pad => InputValue::Field(GenericFieldElement::from(-1i128)),
+          })
+          .collect::<Vec<InputValue>>()
+      ).collect::<Vec<Vec<InputValue>>>();
+
+      let counters = (0..pt_chunks.len())
+        .map(|num| InputValue::Field(GenericFieldElement::from(num)))
+        .collect::<Vec<InputValue>>();
+
+      let key_u32_vec = to_u32_array(key)
+        .iter()
+        .map(|&num| InputValue::Field(GenericFieldElement::from(num)))
+        .collect::<Vec<InputValue>>();
+
+      let nonce_u32_vec = to_u32_array(&nonce)
+        .iter()
+        .map(|&num| InputValue::Field(GenericFieldElement::from(num)))
+        .collect::<Vec<InputValue>>();
+
+      // FIXME: from polynomial digest in Fr to GenericFieldElement
+      // let x = polynomial_input.to_bytes();
+      // let y = GenericFieldElement::<FieldElement>::from_be_bytes_reduce(&x);
+
+      for i in 0..pt_chunks.len() {
+        let private_input = BTreeMap::from([
+          (String::from("key"), InputValue::Vec(key_u32_vec.clone())),
+          (String::from("nonce"), InputValue::Vec(nonce_u32_vec.clone())),
+          (String::from("counter"), counters[i].clone()),
+          (String::from("plaintext"), InputValue::Vec(pt_chunks[i].clone())),
+          // FIXME:
+          (
+            String::from("ciphertext_digest"), InputValue::Field(GenericFieldElement::from(1u32)),
+          ),
+        ]);
+        switchboard_inputs.push(private_input);
+      }
+
+      let plaintext_digest = polynomial_digest(pt, polynomial_input, curr_plaintext_index as u64);
+
+      prev_ciphertext_digest = data_hasher(
+        &ByteOrPad::pad_to_nearest_multiple(
+          &inputs.ciphertext[plaintext_circuit_counter],
+          CIRCUIT_SIZE,
+        ),
+        prev_ciphertext_digest,
+      );
+
+      curr_plaintext_index += pt.len();
+      plaintext_step_out += plaintext_digest;
+    }
+
+    Ok(plaintext_step_out - prev_ciphertext_digest)
   }
 
   /// Builds ROM for [`Manifest`] request and response.

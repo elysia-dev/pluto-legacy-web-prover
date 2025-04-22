@@ -1,14 +1,12 @@
 use std::sync::Arc;
 use edge_frontend::noir::{GenericFieldElement, InputMap, InputValue};
 use edge_frontend::program::{Configuration, ROM, Switchboard, Z0_SECONDARY};
-use edge_frontend::Scalar;
 use edge_frontend::setup::Setup;
 use edge_prover::supernova::PublicParams;
 use proofs::{program, program::{
     data::{InitializedSetup, InstanceParams, NotExpanded, Online, ProofParams, SetupParams},
     manifest::{EncryptionInput, NIVCRom, NivcCircuitInputs, OrigoManifest},
 }, E1, F, G1, G2};
-use tracing::debug;
 use proofs::program::noir::initialize_circuit_list;
 use crate::{origo::OrigoProof, ClientErrors};
 
@@ -23,39 +21,25 @@ pub async fn construct_program_data_and_proof<const CIRCUIT_SIZE: usize>(
     proving_params: Arc<PublicParams<E1>>,
     setup_data: Arc<InitializedSetup>,
 ) -> Result<OrigoProof, ClientErrors> {
-    let NivcCircuitInputs { private_inputs, fold_inputs, initial_nivc_input } =
-        manifest.build_inputs::<CIRCUIT_SIZE>(request_inputs, response_inputs)?;
-
     let NIVCRom { circuit_data, rom } =
         manifest.build_rom::<CIRCUIT_SIZE>(request_inputs, response_inputs);
+
+    let (switchboard_inputs, initial_nivc_input) = manifest.build_switchboard_inputs(
+      request_inputs,
+      response_inputs,
+      &circuit_data,
+      &rom,
+    )?;
 
     // FIXME: use paths from NIVCRom
     let noir_program_paths = vec!["../target/add_external.json", "../target/square_zeroth.json", "../target/swap_memory.json"];
     let noir_programs = initialize_circuit_list(&noir_program_paths);
 
-    let switchboard_inputs = vec![
-      InputMap::from([
-        ("next_pc".to_string(), InputValue::Field(GenericFieldElement::from(1_u64))),
-        (
-          "external".to_string(),
-          InputValue::Vec(vec![
-            InputValue::Field(GenericFieldElement::from(5_u64)),
-            InputValue::Field(GenericFieldElement::from(7_u64)),
-          ]),
-        ),
-      ]),
-      InputMap::from([("next_pc".to_string(), InputValue::Field(GenericFieldElement::from(2_u64)))]),
-      // The next_pc input of swap_memory is -1.
-      InputMap::from([(
-        "next_pc".to_string(),
-        InputValue::Field(GenericFieldElement::from(-1_i128)),
-      )]),
-    ];
     let initial_circuit_index = 0;
     let switchboard = Switchboard::<ROM>::new(
       noir_programs,
       switchboard_inputs,
-      vec![Scalar::from(1), Scalar::from(2)],
+      initial_nivc_input.to_vec(),
       initial_circuit_index,
     );
     let setup = Setup::new(switchboard).unwrap();

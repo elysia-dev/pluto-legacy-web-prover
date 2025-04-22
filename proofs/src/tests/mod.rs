@@ -159,6 +159,7 @@ async fn test_end_to_end_proofs_rom() {
     )]),
   ];
   let initial_circuit_index = 0;
+  // public_input is the initial state
   let public_input = vec![Scalar::from(1), Scalar::from(2)];
   let switchboard = Switchboard::<ROM>::new(
     noir_programs,
@@ -254,10 +255,72 @@ async fn test_end_to_end_proofs_ram() {
   debug!("zn_primary: {:?}", zn_primary);
   // TODO
   // assert_eq!(zn_primary[0], *value_digest);
+  // What is verifier_digest?
+  // assert_eq!(compressed_proof.verifier_digest, ?);
 }
 
 #[tokio::test]
-// #[tracing_test::traced_test]
+#[tracing_test::traced_test]
+async fn test_end_to_end_proofs_get_noir() {
+  use web_prover_core::test_utils::TEST_MANIFEST;
+
+  const CIRCUIT_SIZE: usize = 256;
+  debug!("Creating `private_inputs`...");
+
+  let request_inputs = simple_request_inputs();
+  let response_inputs = simple_response_inputs();
+  let manifest: OrigoManifest = serde_json::from_str(TEST_MANIFEST).unwrap();
+
+  let InitialNIVCInputs { ciphertext_digest, .. } = manifest
+    .initial_inputs::<MAX_STACK_HEIGHT, CIRCUIT_SIZE>(
+      &request_inputs.ciphertext,
+      &response_inputs.ciphertext,
+    )
+    .unwrap();
+
+  // The same code from construct_program_data_and_proof<CIRCUIT_SIZE>
+
+  let NIVCRom { circuit_data: rom_data, rom } =
+    manifest.build_rom::<CIRCUIT_SIZE>(&request_inputs, &response_inputs);
+  debug!("circuit_data: {:?}", rom_data);
+  debug!("rom: {:?}", rom);
+
+  // FIXME: use zktls noir programs
+  let noir_program_paths = vec!["../target/add_external.json", "../target/square_zeroth.json", "../target/swap_memory.json"];
+  let noir_programs = initialize_circuit_list(&noir_program_paths);
+  let (switchboard_inputs, initial_nivc_input) = manifest.build_switchboard_inputs::<CIRCUIT_SIZE>(
+    &request_inputs,
+    &response_inputs,
+    &rom_data,
+    &rom
+  ).unwrap();
+  let initial_circuit_index = 0;
+
+  // Step 2: Create switchboard
+  let public_input = vec![Scalar::from(1), Scalar::from(2)];
+  let switchboard = Switchboard::<ROM>::new(
+    noir_programs,
+    switchboard_inputs,
+    initial_nivc_input.to_vec(),
+    initial_circuit_index,
+  );
+
+  // Step 3: Initialize the setup
+  let setup = Setup::new(switchboard).unwrap();
+
+  let recursive_snark = program::noir::run(&setup).await.unwrap();
+
+  // assertions
+  let zi_primary = recursive_snark.zi_primary();
+  let zi_secondary = recursive_snark.zi_secondary();
+  assert_eq!(zi_primary[0], Scalar::from(0));
+
+  let compressed_proof = program::noir::compress_proof(&setup, &recursive_snark).unwrap();
+  // let proof = compressed_proof.serialize()?;
+}
+
+#[tokio::test]
+#[tracing_test::traced_test]
 async fn test_end_to_end_proofs_get() {
   use web_prover_core::test_utils::TEST_MANIFEST;
 
