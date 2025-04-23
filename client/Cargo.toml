@@ -29,7 +29,9 @@ tls-core          ={ workspace=true }
 tlsn-common       ={ workspace=true }
 tlsn-utils        ={ workspace=true }
 tlsn-formats      ={ git="https://github.com/tlsnotary/tlsn.git", tag="v0.1.0-alpha.7" }
-edge-prover={ git="https://github.com/pluto/edge", rev="cb2c3b5df4cabe7e7bd150f0a5de51669f8409db" }
+# edge-prover={ git="https://github.com/pluto/edge", rev="cb2c3b5df4cabe7e7bd150f0a5de51669f8409db" }
+edge-prover={ path = "../../edge/prover"}
+edge-frontend={ path = "../../edge/frontend" }
 web-prover-core   ={ workspace=true }
 
 # TLSN
