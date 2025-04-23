@@ -30,7 +30,7 @@ use std::collections::{BTreeMap, HashMap};
 
 use derive_more::From;
 use edge_frontend::noir::{GenericFieldElement, InputMap, InputValue};
-use ff::{Field};
+use ff::{Field, PrimeField};
 use num_bigint::BigInt;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
@@ -240,6 +240,7 @@ impl OrigoManifest {
     Ok(NivcCircuitInputs { private_inputs, fold_inputs, initial_nivc_input })
   }
 
+  /// Builds switchboard inputs
   pub fn build_switchboard_inputs<const CIRCUIT_SIZE: usize>(
     &self,
     request_inputs: &EncryptionInput,
@@ -270,6 +271,7 @@ impl OrigoManifest {
         &mut switchboard_inputs,
       )?;
 
+      /*
       if circuit_name.contains("PLAINTEXT_AUTHENTICATION") {
         let mut input_map = InputMap::from([
           ("next_pc".to_string(), InputValue::Field(GenericFieldElement::from(next_pc))),
@@ -286,6 +288,7 @@ impl OrigoManifest {
       } else if circuit_name.contains("JSON_EXTRACTION") {
         // TODO:
       }
+     */
     }
 
     Ok((switchboard_inputs, initial_nivc_input))
@@ -361,6 +364,7 @@ impl OrigoManifest {
           (String::from("counter"), counters[i].clone()),
           (String::from("plaintext"), InputValue::Vec(pt_chunks[i].clone())),
           // FIXME:
+          (String::from("next_pc"), InputValue::Field(GenericFieldElement::from(0u64))),
           (
             String::from("ciphertext_digest"), InputValue::Field(GenericFieldElement::from(1u32)),
           ),
@@ -383,6 +387,50 @@ impl OrigoManifest {
     }
 
     Ok(plaintext_step_out - prev_ciphertext_digest)
+  }
+
+  /// Builds noir ROM for [`Manifest`] request and response
+  pub fn build_rom_noir<const CIRCUIT_SIZE: usize>(
+    &self,
+    request_inputs: &EncryptionInput,
+    response_inputs: &EncryptionInput,
+  ) -> NIVCRom {
+    let plaintext_authentication_label = String::from("PLAINTEXT_AUTHENTICATION");
+    let mut rom = vec![];
+    // ------------------- Request -------------------
+    let combined_request_plaintext_length: usize =
+        request_inputs.plaintext.iter().map(|x| x.len()).sum();
+
+    // plaintext_authentication_label is duplicated `response_packets` times
+    let mut rom_data = HashMap::new();
+    let mut plaintext_circuit_counter = 0;
+    for c in request_inputs.ciphertext.iter() {
+      let circuit_count = (c.len() as f64 / CIRCUIT_SIZE as f64).ceil() as usize;
+      for _ in 0..circuit_count {
+        let plaintext_circuit =
+            format!("{}_{}", plaintext_authentication_label, plaintext_circuit_counter);
+        rom_data.insert(plaintext_circuit.clone(), CircuitData { opcode: 0 });
+        rom.push(plaintext_circuit);
+        plaintext_circuit_counter += 1;
+      }
+    }
+
+    // ------------------- Response -------------------
+    let combined_response_plaintext_length: usize =
+        response_inputs.plaintext.iter().map(|x| x.len()).sum();
+    // plaintext_authentication_label is duplicated `response_packets` times
+    for c in response_inputs.ciphertext.iter() {
+      let circuit_count = (c.len() as f64 / CIRCUIT_SIZE as f64).ceil() as usize;
+      for _ in 0..circuit_count {
+        let plaintext_circuit =
+            format!("{}_{}", plaintext_authentication_label, plaintext_circuit_counter);
+        rom_data.insert(plaintext_circuit.clone(), CircuitData { opcode: 0 });
+        rom.push(plaintext_circuit);
+        plaintext_circuit_counter += 1;
+      }
+    }
+
+    NIVCRom { circuit_data: rom_data, rom }
   }
 
   /// Builds ROM for [`Manifest`] request and response.

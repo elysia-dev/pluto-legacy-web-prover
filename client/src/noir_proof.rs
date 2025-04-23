@@ -22,9 +22,9 @@ pub async fn construct_program_data_and_proof<const CIRCUIT_SIZE: usize>(
     setup_data: Arc<InitializedSetup>,
 ) -> Result<OrigoProof, ClientErrors> {
     let NIVCRom { circuit_data, rom } =
-        manifest.build_rom::<CIRCUIT_SIZE>(request_inputs, response_inputs);
+        manifest.build_rom_noir::<CIRCUIT_SIZE>(request_inputs, response_inputs);
 
-    let (switchboard_inputs, initial_nivc_input) = manifest.build_switchboard_inputs(
+    let (switchboard_inputs, initial_nivc_input) = manifest.build_switchboard_inputs::<CIRCUIT_SIZE>(
       request_inputs,
       response_inputs,
       &circuit_data,
@@ -32,7 +32,7 @@ pub async fn construct_program_data_and_proof<const CIRCUIT_SIZE: usize>(
     )?;
 
     // FIXME: use paths from NIVCRom
-    let noir_program_paths = vec!["../target/add_external.json", "../target/square_zeroth.json", "../target/swap_memory.json"];
+    let noir_program_paths = vec!["../target/plaintext_authentication.json"];
     let noir_programs = initialize_circuit_list(&noir_program_paths);
 
     let initial_circuit_index = 0;

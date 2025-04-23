@@ -281,12 +281,12 @@ async fn test_end_to_end_proofs_get_noir() {
   // The same code from construct_program_data_and_proof<CIRCUIT_SIZE>
 
   let NIVCRom { circuit_data: rom_data, rom } =
-    manifest.build_rom::<CIRCUIT_SIZE>(&request_inputs, &response_inputs);
+    manifest.build_rom_noir::<CIRCUIT_SIZE>(&request_inputs, &response_inputs);
   debug!("circuit_data: {:?}", rom_data);
   debug!("rom: {:?}", rom);
 
   // FIXME: use zktls noir programs
-  let noir_program_paths = vec!["../target/add_external.json", "../target/square_zeroth.json", "../target/swap_memory.json"];
+  let noir_program_paths = vec!["../target/plaintext_authentication.json"];
   let noir_programs = initialize_circuit_list(&noir_program_paths);
   let (switchboard_inputs, initial_nivc_input) = manifest.build_switchboard_inputs::<CIRCUIT_SIZE>(
     &request_inputs,
@@ -297,17 +297,19 @@ async fn test_end_to_end_proofs_get_noir() {
   let initial_circuit_index = 0;
 
   // Step 2: Create switchboard
-  let public_input = vec![Scalar::from(1), Scalar::from(2)];
   let switchboard = Switchboard::<ROM>::new(
     noir_programs,
     switchboard_inputs,
     initial_nivc_input.to_vec(),
     initial_circuit_index,
   );
+  debug!("switchboard: {:?}", switchboard.switchboard_inputs);
 
   // Step 3: Initialize the setup
+  debug!("Setup::new(switchboard)");
   let setup = Setup::new(switchboard).unwrap();
 
+  debug!("program::noir:run");
   let recursive_snark = program::noir::run(&setup).await.unwrap();
 
   // assertions
