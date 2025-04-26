@@ -29,8 +29,8 @@
 use std::collections::{BTreeMap, HashMap};
 
 use derive_more::From;
-use edge_frontend::noir::{GenericFieldElement, InputMap, InputValue};
-use ff::{Field, PrimeField};
+use edge_frontend::{noir::{GenericFieldElement, convert_to_acir_field, InputValue}};
+use ff::{Field};
 use num_bigint::BigInt;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
@@ -353,22 +353,21 @@ impl OrigoManifest {
         .map(|&num| InputValue::Field(GenericFieldElement::from(num)))
         .collect::<Vec<InputValue>>();
 
-      // FIXME: from polynomial digest in Fr to GenericFieldElement
-      // let x = polynomial_input.to_bytes();
-      // let y = GenericFieldElement::<FieldElement>::from_be_bytes_reduce(&x);
-
       for i in 0..pt_chunks.len() {
-        let private_input = BTreeMap::from([
+        let mut private_input = BTreeMap::from([
           (String::from("key"), InputValue::Vec(key_u32_vec.clone())),
           (String::from("nonce"), InputValue::Vec(nonce_u32_vec.clone())),
           (String::from("counter"), counters[i].clone()),
           (String::from("plaintext"), InputValue::Vec(pt_chunks[i].clone())),
-          // FIXME:
-          (String::from("next_pc"), InputValue::Field(GenericFieldElement::from(0u64))),
           (
-            String::from("ciphertext_digest"), InputValue::Field(GenericFieldElement::from(1u32)),
+            String::from("ciphertext_digest"), InputValue::Field(convert_to_acir_field(polynomial_input)),
           ),
         ]);
+        if i == pt_chunks.len() - 1 {
+          private_input.insert(String::from("next_pc"), InputValue::Field(GenericFieldElement::from(-1i128)));
+        } else {
+          private_input.insert(String::from("next_pc"), InputValue::Field(GenericFieldElement::from(0u64)));
+        }
         switchboard_inputs.push(private_input);
       }
 
