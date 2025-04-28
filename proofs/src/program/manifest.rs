@@ -264,12 +264,29 @@ impl OrigoManifest {
         // If the last entry, use -1 to indicate termination
         -1_i128
       };
+    }
 
-      let _ = Self::build_plaintext_authentication_circuit_inputs_noir::<CIRCUIT_SIZE>(
-        request_inputs,
-        ciphertext_digest,
-        &mut switchboard_inputs,
-      )?;
+    let _ = Self::build_plaintext_authentication_circuit_inputs_noir::<CIRCUIT_SIZE>(
+      request_inputs,
+      ciphertext_digest,
+      &mut switchboard_inputs,
+    )?;
+
+    let _ = Self::build_plaintext_authentication_circuit_inputs_noir::<CIRCUIT_SIZE>(
+      response_inputs,
+      ciphertext_digest,
+      &mut switchboard_inputs,
+    )?;
+
+    for (i, input) in switchboard_inputs.iter_mut().enumerate() {
+      let next_pc = if i < rom.len() - 1 {
+        rom_data[&rom[i + 1]].opcode as i128
+      } else {
+        // If the last entry, use -1 to indicate termination
+        -1_i128
+      };
+      input.insert(String::from("next_pc"), InputValue::Field(GenericFieldElement::from(next_pc)));
+    }
 
       /*
       if circuit_name.contains("PLAINTEXT_AUTHENTICATION") {
@@ -289,7 +306,6 @@ impl OrigoManifest {
         // TODO:
       }
      */
-    }
 
     Ok((switchboard_inputs, initial_nivc_input))
   }
@@ -363,11 +379,7 @@ impl OrigoManifest {
             String::from("ciphertext_digest"), InputValue::Field(convert_to_acir_field(polynomial_input)),
           ),
         ]);
-        if i == pt_chunks.len() - 1 {
-          private_input.insert(String::from("next_pc"), InputValue::Field(GenericFieldElement::from(-1i128)));
-        } else {
-          private_input.insert(String::from("next_pc"), InputValue::Field(GenericFieldElement::from(0u64)));
-        }
+
         switchboard_inputs.push(private_input);
       }
 
