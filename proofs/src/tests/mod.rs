@@ -185,18 +185,21 @@ async fn test_end_to_end_proofs_rom() {
   let compressed_proof = program::noir::compress_proof(&setup, &recursive_snark).unwrap();
 
   // Verify
+  /*
   let path = std::path::PathBuf::from("../target/setup.bytes");
   let vsetup = Setup::load_file(&path).unwrap();
   let noir_programs = initialize_circuit_list(&noir_program_paths);
   let vswitchboard = Switchboard::<Configuration>::new(noir_programs);
-  let vsetup = vsetup.into_ready(vswitchboard);
-  let vk = vsetup.verifier_key().unwrap();
+  let vsetup = vsetup.into_ready(switchboard);
+  */
+
+  let vk = setup.verifier_key().unwrap();
 
   let z0_primary = vec![Scalar::from(1), Scalar::from(2), Scalar::from(3), Scalar::from(4), Scalar::from(5), Scalar::from(6), Scalar::from(7), Scalar::from(8), Scalar::from(9), Scalar::from(10), Scalar::from(11),];
   debug!("z0_primary: {:?}", z0_primary);
   debug!("z0_secondary: {:?}", Z0_SECONDARY);
 
-  let (zn_primary, zn_secondary) = compressed_proof.proof.verify(&vsetup.params, &vk, &z0_primary, Z0_SECONDARY).unwrap();
+  let (zn_primary, zn_secondary) = compressed_proof.proof.verify(&setup.params, &vk, &z0_primary, Z0_SECONDARY).unwrap();
 
   assert_eq!(zn_primary[0], Scalar::from(9));
   assert_eq!(zn_primary[1], Scalar::from(36));
