@@ -203,11 +203,12 @@ async fn test_end_to_end_proofs_rom() {
 }
 
 #[tokio::test]
-// #[tracing_test::traced_test]
+#[tracing_test::traced_test]
 async fn test_end_to_end_proofs_ram() {
   // Step 1: Create demo programs
   let noir_program_paths = vec!["../target/collatz_even.json", "../target/collatz_odd.json"];
   let noir_programs = initialize_circuit_list(&noir_program_paths);
+  // 42 -> 21 -> 64 -> 32 -> 16 -> 8 -> 4 -> 2 -> 1
   let input = 42;
 
   // Step 2: Create and prepare the switchboard for proving
@@ -230,7 +231,7 @@ async fn test_end_to_end_proofs_ram() {
   // Step 3: Initialize the setup
   let setup = Setup::new(switchboard).unwrap();
   info!("✅ Initialized setup");
-  debug!("Setup details: {:?}", setup);
+  // debug!("Setup details: {:?}", setup);
 
   // Prove
   let recursive_snark = program::noir::run(&setup).await.unwrap();
@@ -247,16 +248,11 @@ async fn test_end_to_end_proofs_ram() {
   info!("✅ Prepared verification key");
   // debug!("Verifier key details: {:?}", vk);
 
-  let z0_primary = [Scalar::from(input)];
-  debug!("z0_primary: {:?}", z0_primary);
-  debug!("z0_secondary: {:?}", Z0_SECONDARY);
+  let z0_primary = [Scalar::from(input)]; // 42
+  debug!("z0_secondary: {:?}", Z0_SECONDARY); // 0
   let (zn_primary, zn_secondary) = compressed_proof.proof.verify(&vsetup.params, &vk, &z0_primary, Z0_SECONDARY).unwrap();
 
-  debug!("zn_primary: {:?}", zn_primary);
-  // TODO
-  // assert_eq!(zn_primary[0], *value_digest);
-  // What is verifier_digest?
-  // assert_eq!(compressed_proof.verifier_digest, ?);
+  assert_eq!(zn_primary[0], Scalar::from(1));
 }
 
 #[tokio::test]
@@ -274,7 +270,6 @@ async fn test_end_to_end_proofs_plaintext_authentication_noir() {
   let response_inputs = one_block_response_inputs();
   let manifest: OrigoManifest = serde_json::from_str(TEST_MANIFEST).unwrap();
 
-  // TODO: check if initial_inputs get circuit size in bits.
   let InitialNIVCInputs { ciphertext_digest, .. } = manifest
     .initial_inputs::<MAX_STACK_HEIGHT, CIRCUIT_SIZE_NOIR>(
       &request_inputs.ciphertext,
@@ -284,7 +279,6 @@ async fn test_end_to_end_proofs_plaintext_authentication_noir() {
 
   // The same code from construct_program_data_and_proof<CIRCUIT_SIZE>
 
-  // TODO: check CIRCUIT_SIZE is in bytes or bits
   let NIVCRom { circuit_data: rom_data, rom } =
     manifest.build_rom_noir::<CIRCUIT_SIZE_NOIR>(&request_inputs, &response_inputs);
   debug!("circuit_data: {:?}", rom_data);
@@ -293,7 +287,6 @@ async fn test_end_to_end_proofs_plaintext_authentication_noir() {
   // FIXME: use zktls noir programs
   let noir_program_paths = vec!["../target/plaintext_authentication.json"];
   let noir_programs = initialize_circuit_list(&noir_program_paths);
-  // TODO: check CIRCUIT_SIZE is in bytes or bits
   let (switchboard_inputs, initial_nivc_input) = manifest.build_switchboard_inputs::<CIRCUIT_SIZE_NOIR>(
     &request_inputs,
     &response_inputs,
@@ -325,7 +318,19 @@ async fn test_end_to_end_proofs_plaintext_authentication_noir() {
   // TODO: change 0 to a correct value
   // assert_eq!(zi_primary[0], Scalar::from(0));
 
+  // Verify
+  let path = std::path::PathBuf::from("../target/setup.bytes");
+  let vsetup = Setup::load_file(&path).unwrap();
+  let noir_programs = initialize_circuit_list(&noir_program_paths);
+  let vswitchboard = Switchboard::<Configuration>::new(noir_programs);
+  // Error:
+  let vsetup = vsetup.into_ready(vswitchboard);
+  let vk = vsetup.verifier_key().unwrap();
+
+  let z0_primary = vec![Scalar::from(1), Scalar::from(2), Scalar::from(3), Scalar::from(4), Scalar::from(5), Scalar::from(6), Scalar::from(7), Scalar::from(8), Scalar::from(9), Scalar::from(10), Scalar::from(11),];
+
   let compressed_proof = program::noir::compress_proof(&setup, &recursive_snark).unwrap();
+  // let (zn_primary, zn_secondary) = compressed_proof.proof.verify(&vsetup.params, &vk, &z0_primary, Z0_SECONDARY).unwrap();
   // let proof = compressed_proof.serialize()?;
 }
 
