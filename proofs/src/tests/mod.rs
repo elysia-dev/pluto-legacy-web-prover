@@ -287,7 +287,6 @@ async fn test_end_to_end_proofs_plaintext_authentication_noir() {
   debug!("circuit_data: {:?}", rom_data);
   debug!("rom: {:?}", rom);
 
-  // FIXME: use zktls noir programs
   let noir_program_paths = vec!["../target/plaintext_authentication.json"];
   let noir_programs = initialize_circuit_list(&noir_program_paths);
   let (switchboard_inputs, initial_nivc_input) = manifest.build_switchboard_inputs::<CIRCUIT_SIZE_NOIR>(
@@ -322,19 +321,26 @@ async fn test_end_to_end_proofs_plaintext_authentication_noir() {
   // assert_eq!(zi_primary[0], Scalar::from(0));
 
   // Verify
-  let path = std::path::PathBuf::from("../target/setup.bytes");
-  let vsetup = Setup::load_file(&path).unwrap();
-  let noir_programs = initialize_circuit_list(&noir_program_paths);
-  let vswitchboard = Switchboard::<Configuration>::new(noir_programs);
-  // Error:
-  let vsetup = vsetup.into_ready(vswitchboard);
-  let vk = vsetup.verifier_key().unwrap();
-
-  let z0_primary = vec![Scalar::from(1), Scalar::from(2), Scalar::from(3), Scalar::from(4), Scalar::from(5), Scalar::from(6), Scalar::from(7), Scalar::from(8), Scalar::from(9), Scalar::from(10), Scalar::from(11),];
+  let vk = setup.verifier_key().unwrap();
+  // initial_nivc_input
+  // https://github.com/pluto/legacy-web-prover/blob/main/proofs/src/program/manifest.rs#L158-L170
+  let z0_primary = vec![
+    Scalar::from_raw([0x90388e84c482a56b, 0x9581e2342c863840, 0xe97232ce14e7a773, 0x0534bbfb66d6f67b]),
+    Scalar::from(1),
+    Scalar::from(1),
+    Scalar::from_raw([0xce84acba3d8f890f, 0x0879ef3620d7870f, 0x274926ac72df2fa8, 0x1d783777ffc2c504]),
+    Scalar::from_raw([0xf76a4c5afa465bb8, 0x882ae91f44335037, 0x44a11442d0b93142, 0x08e9414b8831fb98]),
+    Scalar::from(6),
+    Scalar::from(0),
+    Scalar::from(1),
+    Scalar::from(0),
+    Scalar::from_raw([0x7546e43a7231dac3, 0x313ebce4de805951, 0x3d9003310dd1c909, 0x072c5a3f63e524e4]),
+    Scalar::from(0),
+  ];
 
   let compressed_proof = program::noir::compress_proof(&setup, &recursive_snark).unwrap();
-  // let (zn_primary, zn_secondary) = compressed_proof.proof.verify(&vsetup.params, &vk, &z0_primary, Z0_SECONDARY).unwrap();
-  // let proof = compressed_proof.serialize()?;
+
+  let (zn_primary, zn_secondary) = compressed_proof.proof.verify(&setup.params, &vk, &z0_primary, Z0_SECONDARY).unwrap();
 }
 
 #[tokio::test]
@@ -363,7 +369,6 @@ async fn test_end_to_end_proofs_get_noir() {
   debug!("circuit_data: {:?}", rom_data);
   debug!("rom: {:?}", rom);
 
-  // FIXME: use zktls noir programs
   let noir_program_paths = vec!["../target/plaintext_authentication.json"];
   let noir_programs = initialize_circuit_list(&noir_program_paths);
   let (switchboard_inputs, initial_nivc_input) = manifest.build_switchboard_inputs::<CIRCUIT_SIZE>(
