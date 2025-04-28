@@ -257,15 +257,6 @@ impl OrigoManifest {
         &response_inputs.ciphertext,
       )?;
 
-    for (i, circuit_name) in rom.iter().enumerate() {
-      let next_pc = if i < rom.len() - 1 {
-        rom_data[&rom[i + 1]].opcode as i128
-      } else {
-        // If the last entry, use -1 to indicate termination
-        -1_i128
-      };
-    }
-
     let _ = Self::build_plaintext_authentication_circuit_inputs_noir::<CIRCUIT_SIZE>(
       request_inputs,
       ciphertext_digest,
