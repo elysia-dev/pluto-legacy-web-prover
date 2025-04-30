@@ -17,7 +17,8 @@ use edge_prover::supernova::RecursiveSNARK;
 use halo2curves::grumpkin;
 use inputs::{
   complex_manifest, complex_request_inputs, complex_response_inputs, simple_request_inputs,
-  simple_response_inputs, one_block_request_inputs, one_block_response_inputs,
+  simple_response_inputs, one_block_request_inputs, one_block_empty_response_inputs,
+  two_block_response_inputs,
 };
 use web_proof_circuits_witness_generator::polynomial_digest;
 
@@ -270,7 +271,7 @@ async fn test_end_to_end_proofs_plaintext_authentication_noir() {
   // let request_inputs = simple_request_inputs();
   // let response_inputs = simple_response_inputs();
   let request_inputs = one_block_request_inputs();
-  let response_inputs = one_block_response_inputs();
+  let response_inputs = one_block_empty_response_inputs();
   let manifest: OrigoManifest = serde_json::from_str(TEST_MANIFEST).unwrap();
 
   let InitialNIVCInputs { ciphertext_digest, .. } = manifest
@@ -345,6 +346,68 @@ async fn test_end_to_end_proofs_plaintext_authentication_noir() {
 
 #[tokio::test]
 #[tracing_test::traced_test]
+async fn test_end_to_end_proofs_plaintext_authentication_noir_split() {
+  use web_prover_core::test_utils::TEST_MANIFEST;
+
+  const CIRCUIT_SIZE: usize = 64;
+  debug!("Creating `private_inputs`...");
+
+  let request_inputs = one_block_empty_response_inputs(); // all padding 64 bytes
+  let response_inputs = two_block_response_inputs(); // 76 bytes
+  let manifest: OrigoManifest = serde_json::from_str(TEST_MANIFEST).unwrap();
+
+  let InitialNIVCInputs { ciphertext_digest, .. } = manifest
+    .initial_inputs::<MAX_STACK_HEIGHT, CIRCUIT_SIZE>(
+      &request_inputs.ciphertext,
+      &response_inputs.ciphertext,
+    )
+    .unwrap();
+
+  // The same code from construct_program_data_and_proof<CIRCUIT_SIZE>
+
+  let NIVCRom { circuit_data: rom_data, rom } =
+    manifest.build_rom_noir::<CIRCUIT_SIZE>(&request_inputs, &response_inputs);
+  debug!("circuit_data: {:?}", rom_data);
+  debug!("rom: {:?}", rom);
+
+  let noir_program_paths = vec!["../target/plaintext_authentication.json"];
+  let noir_programs = initialize_circuit_list(&noir_program_paths);
+  let (switchboard_inputs, initial_nivc_input) = manifest.build_switchboard_inputs::<CIRCUIT_SIZE>(
+    &request_inputs,
+    &response_inputs,
+    &rom_data,
+    &rom
+  ).unwrap();
+  let initial_circuit_index = 0;
+  debug!("switchboard_inputs: {:?}", switchboard_inputs);
+  debug!("initial_nivc_input: {:?}", initial_nivc_input);
+
+  // Step 2: Create switchboard
+  let switchboard = Switchboard::<ROM>::new(
+    noir_programs,
+    switchboard_inputs,
+    initial_nivc_input.to_vec(),
+    initial_circuit_index,
+  );
+
+  // Step 3: Initialize the setup
+  debug!("Setup::new(switchboard)");
+  let setup = Setup::new(switchboard).unwrap();
+
+  debug!("program::noir:run");
+  let recursive_snark = program::noir::run(&setup).await.unwrap();
+
+  // assertions
+  let zi_primary = recursive_snark.zi_primary();
+  let zi_secondary = recursive_snark.zi_secondary();
+  assert_eq!(zi_primary[0], Scalar::from(0));
+
+  let compressed_proof = program::noir::compress_proof(&setup, &recursive_snark).unwrap();
+  compressed_proof.verify
+}
+
+#[tokio::test]
+#[tracing_test::traced_test]
 async fn test_end_to_end_proofs_get_noir() {
   use web_prover_core::test_utils::TEST_MANIFEST;
 
@@ -386,7 +449,6 @@ async fn test_end_to_end_proofs_get_noir() {
     initial_nivc_input.to_vec(),
     initial_circuit_index,
   );
-  debug!("switchboard: {:?}", switchboard.switchboard_inputs);
 
   // Step 3: Initialize the setup
   debug!("Setup::new(switchboard)");

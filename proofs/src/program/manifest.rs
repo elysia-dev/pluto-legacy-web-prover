@@ -279,25 +279,6 @@ impl OrigoManifest {
       input.insert(String::from("next_pc"), InputValue::Field(GenericFieldElement::from(next_pc)));
     }
 
-      /*
-      if circuit_name.contains("PLAINTEXT_AUTHENTICATION") {
-        let mut input_map = InputMap::from([
-          ("next_pc".to_string(), InputValue::Field(GenericFieldElement::from(next_pc))),
-        ]);
-
-        switchboard_inputs.push(input_map);
-      } else if circuit_name.contains("HTTP_VERIFICATION") {
-        // TODO:
-        switchboard_inputs.push(
-          InputMap::from([
-            ("next_pc".to_string(), InputValue::Field(GenericFieldElement::from(next_pc))),
-          ])
-        );
-      } else if circuit_name.contains("JSON_EXTRACTION") {
-        // TODO:
-      }
-     */
-
     Ok((switchboard_inputs, initial_nivc_input))
   }
 

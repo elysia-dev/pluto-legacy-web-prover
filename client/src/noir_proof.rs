@@ -1,8 +1,5 @@
-use std::sync::Arc;
-use edge_frontend::noir::{GenericFieldElement, InputMap, InputValue};
-use edge_frontend::program::{Configuration, ROM, Switchboard, Z0_SECONDARY};
+use edge_frontend::program::{ROM, Switchboard, Z0_SECONDARY};
 use edge_frontend::setup::Setup;
-use edge_prover::supernova::PublicParams;
 use proofs::{program, program::{
     data::{InitializedSetup, InstanceParams, NotExpanded, Online, ProofParams, SetupParams},
     manifest::{EncryptionInput, NIVCRom, NivcCircuitInputs, OrigoManifest},
@@ -17,9 +14,6 @@ pub async fn construct_program_data_and_proof<const CIRCUIT_SIZE: usize>(
     manifest: &OrigoManifest,
     request_inputs: &EncryptionInput,
     response_inputs: &EncryptionInput,
-    vks: (F<G1>, F<G2>),
-    proving_params: Arc<PublicParams<E1>>,
-    setup_data: Arc<InitializedSetup>,
 ) -> Result<OrigoProof, ClientErrors> {
     let NIVCRom { circuit_data, rom } =
         manifest.build_rom_noir::<CIRCUIT_SIZE>(request_inputs, response_inputs);
@@ -32,7 +26,7 @@ pub async fn construct_program_data_and_proof<const CIRCUIT_SIZE: usize>(
     )?;
 
     // FIXME: use paths from NIVCRom
-    let noir_program_paths = vec!["../target/plaintext_authentication.json"];
+    let noir_program_paths = vec!["./target/plaintext_authentication.json"];
     let noir_programs = initialize_circuit_list(&noir_program_paths);
 
     let initial_circuit_index = 0;

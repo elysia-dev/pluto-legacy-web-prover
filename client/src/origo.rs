@@ -82,6 +82,54 @@ pub async fn sign(
   Ok(sign_response)
 }
 
+pub(crate) async fn proxy_and_sign_and_generate_proof_noir(
+  config: config::Config,
+  // TODO: reuse the initialized setup
+  // proving_params: Option<Vec<u8>>,
+  // setup_data: UninitializedSetup,
+) -> Result<OrigoProof, ClientErrors> {
+  let session_id = config.session_id.clone();
+
+  #[cfg(not(target_arch = "wasm32"))]
+  let (mut origo_conn, _) = crate::origo_native::proxy(config.clone(), session_id.clone()).await?;
+  #[cfg(target_arch = "wasm32")]
+  let (mut origo_conn, _) = crate::origo_wasm32::proxy(config.clone(), session_id.clone()).await?;
+
+  let sb = SignBody {
+    handshake_server_iv:  hex::encode(
+      origo_conn.secret_map.get("Handshake:server_iv").unwrap().clone(),
+    ),
+    handshake_server_key: hex::encode(
+      origo_conn.secret_map.get("Handshake:server_key").unwrap().clone(),
+    ),
+  };
+
+  let _sign_data = crate::origo::sign(config.clone(), session_id.clone(), sb).await;
+
+  let witness = origo_conn.to_witness_data();
+
+  let TLSEncryption { request: request_inputs, response: response_inputs } =
+    decrypt_tls_ciphertext(&witness)?;
+
+  let manifest = config.proving.manifest.unwrap();
+
+  let mut proof = generate_proof_noir(
+    &manifest.clone().into(),
+    &request_inputs,
+    &response_inputs,
+  ).await?;
+  let flattened_plaintext: Vec<u8> = response_inputs.plaintext.into_iter().flatten().collect();
+  let http_body = compute_http_witness(&flattened_plaintext, HttpMaskType::Body);
+  let value = json_value_digest::<{ proofs::circuits::MAX_STACK_HEIGHT }>(
+    &http_body,
+    &manifest.response.body.json_path,
+  )?;
+
+  proof.value = Some(String::from_utf8_lossy(&value).into_owned());
+
+  Ok(proof)
+}
+
 // TODO: We probably don't need to call this "proxy_and_sign" since we don't sign in here
 pub(crate) async fn proxy_and_sign_and_generate_proof(
   config: config::Config,
@@ -133,6 +181,18 @@ pub(crate) async fn proxy_and_sign_and_generate_proof(
   proof.value = Some(String::from_utf8_lossy(&value).into_owned());
 
   Ok(proof)
+}
+
+pub(crate) async fn generate_proof_noir(
+  manifest: &OrigoManifest,
+  request_inputs: &EncryptionInput,
+  response_inputs: &EncryptionInput,
+) -> Result<OrigoProof, ClientErrors> {
+  crate::noir_proof::construct_program_data_and_proof::<{ proofs::circuits::CIRCUIT_SIZE_512 }>(
+    manifest,
+    request_inputs,
+    response_inputs,
+  ).await
 }
 
 pub(crate) async fn generate_proof(

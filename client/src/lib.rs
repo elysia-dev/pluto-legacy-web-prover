@@ -56,6 +56,7 @@ pub async fn prover_inner(
   match config.mode {
     config::NotaryMode::TLSN => prover_inner_tlsn(config).await,
     config::NotaryMode::Origo => prover_inner_origo(config, proving_params, setup_data).await,
+    config::NotaryMode::OrigoNoir => prover_inner_origo_noir(config).await,
     config::NotaryMode::TEE => prover_inner_tee(config).await,
     config::NotaryMode::Proxy => prover_inner_proxy(config).await,
   }
@@ -101,6 +102,36 @@ pub async fn prover_inner_tlsn(mut config: config::Config) -> Result<Proof, Clie
   debug!("proof.verify_reply: {:?}", verify_response);
 
   Ok(Proof::Tlsn(TlsnProof { proof: p, sign_reply: Some(verify_response) }))
+}
+
+#[allow(unused_variables)]
+pub async fn prover_inner_origo_noir(
+  config: config::Config,
+) -> Result<Proof, ClientErrors> {
+  let session_id = config.session_id.clone();
+
+  // TODO: reuse the initialized setup
+
+  let mut proof =
+    origo::proxy_and_sign_and_generate_proof_noir(config.clone()).await?;
+
+  let manifest = config.proving.manifest.clone().ok_or(ClientErrors::ManifestMissingError)?;
+
+  debug!("sending proof to proxy for verification");
+  let verify_response = verify(config, origo::VerifyBody {
+    session_id,
+    origo_proof: proof.clone(),
+    manifest: manifest.into(),
+  })
+  .await?;
+  proof.sign_reply = Some(verify_response);
+
+  debug!("proof.value: {:?}\nproof.verify_reply: {:?}", proof.value, proof.sign_reply);
+
+  // TODO: This is where we should output richer proof data, the verify response has the hash of
+  // the target value now. Since this is in the client, we can use the private variables here. We
+  // just need to get out the value.
+  Ok(Proof::Origo(proof))
 }
 
 #[allow(unused_variables)]

@@ -23,6 +23,8 @@ use crate::errors::ClientErrors;
 pub enum NotaryMode {
   /// Origo proxy mode
   Origo,
+  /// Origo Noir mode
+  OrigoNoir,
   /// TLS notary MPC-TLS mode
   TLSN,
   // TEE proxy mode
@@ -35,6 +37,7 @@ impl std::fmt::Display for NotaryMode {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     match self {
       NotaryMode::Origo => write!(f, "origo"),
+      NotaryMode::OrigoNoir => write!(f, "origo-noir"),
       NotaryMode::TLSN => write!(f, "tlsnotary"),
       NotaryMode::TEE => write!(f, "tee"),
       NotaryMode::Proxy => write!(f, "proxy"),

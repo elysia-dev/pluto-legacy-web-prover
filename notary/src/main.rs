@@ -35,6 +35,7 @@ mod axum_websocket;
 mod config;
 mod errors;
 mod origo;
+mod origo_noir;
 mod origo_verifier;
 mod proxy;
 mod tcp;
