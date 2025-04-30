@@ -3,7 +3,7 @@ name   ="webprover"
 edition="2021"
 
 [workspace]
-members =["client", "client_ios", "client_wasm", "notary", "proofs", "web-prover-core", "tests"]
+members =["client", "client_ios", "client_wasm", "notary", "proofs", "web-prover-core", "tests", "rust_binance"]
 resolver="2"
 
 [workspace.metadata]
@@ -16,6 +16,8 @@ client         ={ path="client" }
 proofs         ={ path="proofs" }
 notary         ={ path="notary" }
 web-prover-core={ path="web-prover-core" }
+rust_binance   ={ path="rust_binance" }
+
 # Serde
 serde     ={ version="1.0.204", features=["derive"] }
 serde_json="1.0.120"
