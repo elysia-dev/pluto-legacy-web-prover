@@ -86,10 +86,11 @@ pub async fn verify(
       println!("output: {:?}", output);
       // TODO: We should also check that the full extended ROM was correct? Although maybe that's
       // implicit in this.
-      if output[5] != F::<G1>::from(0) {
+      // TODO: uncomment after adding http verification circuit.
+      /* if output[5] != F::<G1>::from(0) {
         debug!("HTTP header match: {:?}", output[5]);
         return Err(ProofError::VerifyFailed(String::from("HTTP header match failed")).into());
-      } else if output[8] != F::<G1>::from(0) {
+      } else */ if output[8] != F::<G1>::from(0) {
         debug!("JSON final state: {:?}", output[8]);
         return Err(ProofError::VerifyFailed(String::from("JSON final state invalid")).into());
       } else if output[10] != ciphertext_digest {
@@ -98,25 +99,22 @@ pub async fn verify(
         return Err(
           ProofError::VerifyFailed(String::from("invalid calculated ciphertext digest")).into(),
         );
-      } else if output[0]
-        != polynomial_digest(
-          payload.origo_proof.value.clone().unwrap().as_bytes(),
+      } else {
+        let value = payload.origo_proof.value.clone().unwrap();
+        let value_digest = polynomial_digest(
+          value.as_bytes(),
           ciphertext_digest,
           0,
-        )
-      {
-        debug!("output[0]: {:?}", output[0]);
-        debug!("value: {:?}", payload.origo_proof.value.clone().unwrap());
-        debug!(
-          "value_polynomial_digest: {:?}",
-          polynomial_digest(
-            payload.origo_proof.value.clone().unwrap().as_bytes(),
-            ciphertext_digest,
-            0,
-          )
         );
-        return Err(ProofError::VerifyFailed(String::from("inccorect final circuit value")).into());
-      } else {
+
+        if output[0] != value_digest {
+          debug!("output[0]: {:?}", output[0]);
+          debug!("value: {:?}", value);
+          debug!("value_polynomial_digest: {:?}", value_digest);
+
+          return Err(ProofError::VerifyFailed(String::from("inccorect final circuit value")).into());
+        }
+
         // TODO: add the manifest digest?
         debug!("output from verifier: {output:?}");
         // This unwrap should be safe for now as the value will always be present
