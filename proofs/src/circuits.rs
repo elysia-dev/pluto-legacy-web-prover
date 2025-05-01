@@ -16,6 +16,8 @@ use crate::{
 // -------------------------------------- circuits -------------------------------------- //
 /// Maximum ROM length
 pub const MAX_ROM_LENGTH: usize = 100;
+// For testing
+pub const CIRCUIT_SIZE_64: usize = 64;
 /// Circuit size 256
 pub const CIRCUIT_SIZE_256: usize = 256;
 /// Circuit size 512

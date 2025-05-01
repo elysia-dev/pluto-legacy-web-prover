@@ -67,8 +67,8 @@ pub struct SignQuery {
 
 #[derive(Serialize, Debug, Clone)]
 pub struct VerifierInputs {
-  request_messages:  Vec<Vec<u8>>,
-  response_messages: Vec<Vec<u8>>,
+  pub request_messages:  Vec<Vec<u8>>,
+  pub response_messages: Vec<Vec<u8>>,
 }
 
 // TODO: Don't need this method? But can use the logic to do the signature.
@@ -168,7 +168,7 @@ pub async fn proxy(
   }
 }
 
-fn find_ciphertext_permutation<const CIRCUIT_SIZE: usize>(
+pub(crate) fn find_ciphertext_permutation<const CIRCUIT_SIZE: usize>(
   expected_ciphertext_digest: F<G1>,
   request_messages: Vec<Vec<u8>>,
   response_messages: Vec<Vec<u8>>,

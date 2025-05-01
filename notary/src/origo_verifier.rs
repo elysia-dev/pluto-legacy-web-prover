@@ -4,7 +4,8 @@
 //! - HTTP: HTTP parsing and locking
 //! - JSON: JSON extract
 use std::collections::HashMap;
-
+use edge_frontend::program::{Configuration, Switchboard};
+use edge_frontend::setup::{Ready, Setup};
 use edge_prover::supernova::snark::{CompressedSNARK, VerifierKey};
 use proofs::{
   circuits::{construct_setup_data_from_fs, PROVING_PARAMS_512},
@@ -12,7 +13,7 @@ use proofs::{
   E1, F, G1, G2, S1, S2,
 };
 use tracing::{debug, info};
-
+use proofs::program::noir::initialize_circuit_list;
 use crate::errors::ProxyError;
 
 pub struct Verifier {
@@ -32,6 +33,18 @@ pub fn flatten_rom(rom: Vec<String>) -> Vec<String> {
         .to_string()
     })
     .collect()
+}
+
+pub fn initialize_noir_verifier() -> Result<Setup<Ready<Configuration>>, ProxyError> {
+  let noir_program_paths = vec!["./target/plaintext_authentication.json"];
+  // Verify
+  let path = std::path::PathBuf::from("./target/setup.bytes");
+  let vsetup = Setup::load_file(&path).unwrap();
+  let noir_programs = initialize_circuit_list(&noir_program_paths);
+  let vswitchboard = Switchboard::<Configuration>::new(noir_programs);
+  let vsetup = vsetup.into_ready(vswitchboard);
+
+  Ok(vsetup)
 }
 
 pub fn initialize_verifier() -> Result<Verifier, ProxyError> {

@@ -135,6 +135,37 @@ pub(crate) fn simple_request_inputs() -> EncryptionInput {
   }
 }
 
+// plaintext[0]
+// HTTP/1.1 200 OK
+// Connection: close
+// Content-Length: 22
+// Cache-Control: max-age=300
+// Content-Security-Policy: default-src 'none'; style-src 'unsafe-inline'; sandbox
+// Content-Type: text/plain; charset=utf-8
+// ETag: "e0e6510c1fc13b3a63acbc0615ee07a4952873a8da77027d00412fccf1a5ce29"
+// Strict-Transport-Security: max-age=31536000
+// X-Content-Type-Options: nosniff
+// X-Frame-Options: deny
+// X-XSS-Protection: 1; mode=block
+// X-GitHub-Request-Id: 55D2:31FB4B:9E2B1:E93BD:678A2672
+// Accept-Ranges: bytes
+// Date: Fri, 17 Jan 2025 09:44:19 GMT
+// Via: 1.1 varnish
+// X-Served-By: cache-hyd11000035-HYD
+// X-Cache: MISS
+// X-Cache-Hits: 0
+// X-Timer: S1737107059.963607,VS0,VE274
+// Vary: Authorization,Accept-Encoding,Origin
+// Access-Control-Allow-Origin: *
+// Cross-Origin-Resource-Policy: cross-origin
+// X-Fastly-Request-ID: 56573d561460f094a869e1d5fba26dce4d617c2e
+// Expires: Fri, 17 Jan 2025 09:49:19 GMT
+// Source-Age: 0
+
+// plaintext[1]
+//{
+//  "hello": "world"
+//}
 pub(crate) fn simple_response_inputs() -> EncryptionInput {
   EncryptionInput {
     plaintext:  vec![

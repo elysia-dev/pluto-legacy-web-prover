@@ -19,7 +19,7 @@ use crate::{origo::OrigoProof, ClientErrors};
 /// - `request_inputs` - TLS transcript request inputs
 /// - `response_inputs` - TLS transcript response inputs
 /// - `vks` - verification keys
-/// - `proving_params` - proving parameters
+/// - `proving_params` - proving parameters from edge/prover/src/supernova/mod.rs
 /// - `setup_data` - [`InitializedSetup`] containing circuit R1CS and witness generator files
 ///
 /// # Returns

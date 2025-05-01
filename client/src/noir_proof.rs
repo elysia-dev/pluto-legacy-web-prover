@@ -1,9 +1,6 @@
-use edge_frontend::program::{ROM, Switchboard, Z0_SECONDARY};
+use edge_frontend::program::{ROM, Switchboard};
 use edge_frontend::setup::Setup;
-use proofs::{program, program::{
-    data::{InitializedSetup, InstanceParams, NotExpanded, Online, ProofParams, SetupParams},
-    manifest::{EncryptionInput, NIVCRom, NivcCircuitInputs, OrigoManifest},
-}, E1, F, G1, G2};
+use proofs::{program, program::manifest::{EncryptionInput, NIVCRom, OrigoManifest}};
 use proofs::program::noir::initialize_circuit_list;
 use crate::{origo::OrigoProof, ClientErrors};
 

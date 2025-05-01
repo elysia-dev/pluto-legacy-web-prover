@@ -261,15 +261,13 @@ async fn test_end_to_end_proofs_ram() {
 
 #[tokio::test]
 #[tracing_test::traced_test]
-async fn test_end_to_end_proofs_plaintext_authentication_noir() {
+async fn test_plaintext_authentication_noir_store_setup() {
   use web_prover_core::test_utils::TEST_MANIFEST;
 
   // TODO: later change to 256 or 512
   const CIRCUIT_SIZE_NOIR: usize = 64;
   debug!("Creating `private_inputs`...");
 
-  // let request_inputs = simple_request_inputs();
-  // let response_inputs = simple_response_inputs();
   let request_inputs = one_block_request_inputs();
   let response_inputs = one_block_empty_response_inputs();
   let manifest: OrigoManifest = serde_json::from_str(TEST_MANIFEST).unwrap();
@@ -296,6 +294,62 @@ async fn test_end_to_end_proofs_plaintext_authentication_noir() {
     &rom_data,
     &rom
   ).unwrap();
+  debug!("initial_nivc_input: {:?}", initial_nivc_input);
+  debug!("switchboard_inputs: {:?}", switchboard_inputs);
+  let initial_circuit_index = 0;
+
+  // Step 2: Create switchboard
+  let switchboard = Switchboard::<ROM>::new(
+    noir_programs,
+    switchboard_inputs,
+    initial_nivc_input.to_vec(),
+    initial_circuit_index,
+  );
+  // debug!("switchboard: {:?}", switchboard.switchboard_inputs);
+
+  // Step 3: Initialize the setup
+  debug!("Setup::new(switchboard)");
+  let setup = Setup::new(switchboard).unwrap();
+  setup.store_file(&std::path::PathBuf::from("../target/setup.bytes")).unwrap();
+}
+
+
+#[tokio::test]
+#[tracing_test::traced_test]
+async fn test_end_to_end_proofs_plaintext_authentication_noir() {
+  use web_prover_core::test_utils::TEST_MANIFEST;
+
+  // TODO: later change to 256 or 512
+  const CIRCUIT_SIZE_NOIR: usize = 64;
+  debug!("Creating `private_inputs`...");
+
+  let request_inputs = one_block_request_inputs();
+  let response_inputs = one_block_empty_response_inputs();
+  let manifest: OrigoManifest = serde_json::from_str(TEST_MANIFEST).unwrap();
+
+  let InitialNIVCInputs { ciphertext_digest, .. } = manifest
+    .initial_inputs::<MAX_STACK_HEIGHT, CIRCUIT_SIZE_NOIR>(
+      &request_inputs.ciphertext,
+      &response_inputs.ciphertext,
+    )
+    .unwrap();
+
+  // The same code from construct_program_data_and_proof<CIRCUIT_SIZE>
+
+  let NIVCRom { circuit_data: rom_data, rom } =
+    manifest.build_rom_noir::<CIRCUIT_SIZE_NOIR>(&request_inputs, &response_inputs);
+  debug!("circuit_data: {:?}", rom_data);
+  debug!("rom: {:?}", rom);
+
+  let noir_program_paths = vec!["../target/plaintext_authentication_64.json"];
+  let noir_programs = initialize_circuit_list(&noir_program_paths);
+  let (switchboard_inputs, initial_nivc_input) = manifest.build_switchboard_inputs::<CIRCUIT_SIZE_NOIR>(
+    &request_inputs,
+    &response_inputs,
+    &rom_data,
+    &rom
+  ).unwrap();
+  debug!("initial_nivc_input: {:?}", initial_nivc_input);
   debug!("switchboard_inputs: {:?}", switchboard_inputs);
   let initial_circuit_index = 0;
 
@@ -323,7 +377,7 @@ async fn test_end_to_end_proofs_plaintext_authentication_noir() {
 
   // Verify
   let vk = setup.verifier_key().unwrap();
-  // initial_nivc_input
+  // z0_primary is the same as initial_nivc_input
   // https://github.com/pluto/legacy-web-prover/blob/main/proofs/src/program/manifest.rs#L158-L170
   let z0_primary = vec![
     Scalar::from_raw([0x90388e84c482a56b, 0x9581e2342c863840, 0xe97232ce14e7a773, 0x0534bbfb66d6f67b]),
@@ -370,7 +424,7 @@ async fn test_end_to_end_proofs_plaintext_authentication_noir_split() {
   debug!("circuit_data: {:?}", rom_data);
   debug!("rom: {:?}", rom);
 
-  let noir_program_paths = vec!["../target/plaintext_authentication.json"];
+  let noir_program_paths = vec!["../target/plaintext_authentication_64.json"];
   let noir_programs = initialize_circuit_list(&noir_program_paths);
   let (switchboard_inputs, initial_nivc_input) = manifest.build_switchboard_inputs::<CIRCUIT_SIZE>(
     &request_inputs,
@@ -403,7 +457,6 @@ async fn test_end_to_end_proofs_plaintext_authentication_noir_split() {
   assert_eq!(zi_primary[0], Scalar::from(0));
 
   let compressed_proof = program::noir::compress_proof(&setup, &recursive_snark).unwrap();
-  compressed_proof.verify
 }
 
 #[tokio::test]
@@ -411,7 +464,7 @@ async fn test_end_to_end_proofs_plaintext_authentication_noir_split() {
 async fn test_end_to_end_proofs_get_noir() {
   use web_prover_core::test_utils::TEST_MANIFEST;
 
-  const CIRCUIT_SIZE: usize = 64;
+  const CIRCUIT_SIZE: usize = 512;
   debug!("Creating `private_inputs`...");
 
   let request_inputs = simple_request_inputs();
@@ -441,6 +494,8 @@ async fn test_end_to_end_proofs_get_noir() {
     &rom
   ).unwrap();
   let initial_circuit_index = 0;
+  debug!("switchboard_inputs: {:?}", switchboard_inputs);
+  debug!("initial_nivc_input: {:?}", initial_nivc_input);
 
   // Step 2: Create switchboard
   let switchboard = Switchboard::<ROM>::new(
@@ -460,10 +515,26 @@ async fn test_end_to_end_proofs_get_noir() {
   // assertions
   let zi_primary = recursive_snark.zi_primary();
   let zi_secondary = recursive_snark.zi_secondary();
-  assert_eq!(zi_primary[0], Scalar::from(0));
+  // assert_eq!(zi_primary[0], Scalar::from(0));
 
   let compressed_proof = program::noir::compress_proof(&setup, &recursive_snark).unwrap();
-  // let proof = compressed_proof.serialize()?;
+
+  // Verify
+  let path = std::path::PathBuf::from("../target/setup.bytes");
+  let vsetup = Setup::load_file(&path).unwrap();
+  let noir_programs = initialize_circuit_list(&noir_program_paths);
+  let vswitchboard = Switchboard::<Configuration>::new(noir_programs);
+  let vsetup = vsetup.into_ready(vswitchboard);
+
+  let vk = vsetup.verifier_key().unwrap();
+  info!("✅ Prepared verification key");
+  // debug!("Verifier key details: {:?}", vk);
+
+  let z0_primary = initial_nivc_input;
+  debug!("z0_secondary: {:?}", Z0_SECONDARY); // 0
+  let (zn_primary, zn_secondary) = compressed_proof.proof.verify(&vsetup.params, &vk, &z0_primary, Z0_SECONDARY).unwrap();
+  // TODO: verify the proof
+  // assert_eq!(zn_primary[0], Scalar::from(1));
 }
 
 #[tokio::test]

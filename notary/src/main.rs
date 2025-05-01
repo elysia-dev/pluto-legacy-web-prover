@@ -12,6 +12,8 @@ use axum::{
   routing::{get, post},
   Router,
 };
+use edge_frontend::program::Configuration;
+use edge_frontend::setup::{Ready, Setup};
 use errors::NotaryServerError;
 use hyper::{body::Incoming, server::conn::http1};
 use hyper_util::rt::TokioIo;
@@ -53,6 +55,7 @@ struct SharedState {
   origo_sessions:     Arc<Mutex<HashMap<String, tls_parser::Transcript<tls_parser::Raw>>>>,
   verifier_sessions:  Arc<Mutex<HashMap<String, origo::VerifierInputs>>>,
   verifier:           origo_verifier::Verifier,
+  noir_verifier:      Setup<Ready<Configuration>>,
 }
 
 /// Main entry point for the notary server application.
@@ -110,6 +113,7 @@ async fn main() -> Result<(), NotaryServerError> {
     origo_sessions:     Default::default(),
     verifier_sessions:  Default::default(),
     verifier:           origo_verifier::initialize_verifier().unwrap(),
+    noir_verifier:      origo_verifier::initialize_noir_verifier().unwrap(),
   });
 
   let router = Router::new()
@@ -121,6 +125,7 @@ async fn main() -> Result<(), NotaryServerError> {
     .route("/v1/tee", get(tee::proxy))
     .route("/v1/origo/sign", post(origo::sign))
     .route("/v1/origo/verify", post(origo::verify))
+    .route("/v1/origo-noir/verify", post(origo_noir::verify))
     .route("/v1/proxy", post(proxy::proxy))
     .route("/v1/meta/keys/:key", get(meta_keys))
     .layer(CorsLayer::permissive())
