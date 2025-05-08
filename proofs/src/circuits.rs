@@ -32,6 +32,7 @@ pub const PROVING_PARAMS_512: &str = concat!(
   env!("WEB_PROVER_CIRCUITS_VERSION"),
   "/serialized_setup_512b_rom_length_100.bin"
 );
+pub const PLAINTEXT_AUTHENTICATION_NOIR_PROGRAM: &str = "target/plaintext_authentication.json";
 /// Proving parameters bytes
 #[cfg(not(target_arch = "wasm32"))]
 pub fn load_proving_params_512() -> Result<Vec<u8>, std::io::Error> {

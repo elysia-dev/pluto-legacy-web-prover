@@ -13,6 +13,7 @@ use proofs::{
   E1, F, G1, G2, S1, S2,
 };
 use tracing::{debug, info};
+use proofs::circuits::{PLAINTEXT_AUTHENTICATION_NOIR_PROGRAM};
 use proofs::program::noir::initialize_circuit_list;
 use crate::errors::ProxyError;
 
@@ -36,7 +37,7 @@ pub fn flatten_rom(rom: Vec<String>) -> Vec<String> {
 }
 
 pub fn initialize_noir_verifier() -> Result<Setup<Ready<Configuration>>, ProxyError> {
-  let noir_program_paths = vec!["./target/plaintext_authentication.json"];
+  let noir_program_paths = vec![PLAINTEXT_AUTHENTICATION_NOIR_PROGRAM];
   // Verify
   let path = std::path::PathBuf::from("./target/setup.bytes");
   let vsetup = Setup::load_file(&path).unwrap();

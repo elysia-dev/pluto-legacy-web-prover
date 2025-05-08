@@ -286,7 +286,7 @@ async fn test_plaintext_authentication_noir_store_setup() {
   debug!("circuit_data: {:?}", rom_data);
   debug!("rom: {:?}", rom);
 
-  let noir_program_paths = vec!["../target/plaintext_authentication.json"];
+  let noir_program_paths = vec!["../target/plaintext_authentication_64.json"];
   let noir_programs = initialize_circuit_list(&noir_program_paths);
   let (switchboard_inputs, initial_nivc_input) = manifest.build_switchboard_inputs::<CIRCUIT_SIZE_NOIR>(
     &request_inputs,
@@ -485,7 +485,10 @@ async fn test_end_to_end_proofs_get_noir() {
   debug!("circuit_data: {:?}", rom_data);
   debug!("rom: {:?}", rom);
 
-  let noir_program_paths = vec!["../target/plaintext_authentication.json"];
+  let noir_program_paths = vec![
+    "../target/plaintext_authentication.json",
+    "../target/json_extraction.json",
+  ];
   let noir_programs = initialize_circuit_list(&noir_program_paths);
   let (switchboard_inputs, initial_nivc_input) = manifest.build_switchboard_inputs::<CIRCUIT_SIZE>(
     &request_inputs,

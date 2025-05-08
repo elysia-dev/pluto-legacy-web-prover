@@ -210,8 +210,7 @@ impl OrigoManifest {
     let _ = build_json_extraction_circuit_inputs::<CIRCUIT_SIZE>(
       &request_body,
       ciphertext_digest,
-      (Some(&[]), Some(&self.0.response.body.json_path)), /* WARN: sending response keys for
-                                                           * request */
+      (Some(&[]), Some(&self.0.response.body.json_path)), /* WARN: sending response keys for request */
       &mut private_inputs,
     )?;
     // debug!("private_inputs: {:?}", private_inputs.len());
@@ -233,7 +232,7 @@ impl OrigoManifest {
     let _ = build_json_extraction_circuit_inputs::<CIRCUIT_SIZE>(
       &response_body,
       ciphertext_digest,
-      (None, Some(&self.0.response.body.json_path)),
+      (None, Some(&self.0.response.body.json_path)),  /* WARN: sending response keys for request */
       &mut private_inputs,
     )?;
 
@@ -263,12 +262,42 @@ impl OrigoManifest {
       &mut switchboard_inputs,
     )?;
 
+    let (_, request_body) = Self::build_http_verification_circuit_inputs_noir::<CIRCUIT_SIZE>(
+      &request_inputs.plaintext,
+      ciphertext_digest,
+      &headers_digest,
+      &mut switchboard_inputs,
+    )?;
+
+    let _ = Self::build_json_extraction_circuit_inputs_noir::<CIRCUIT_SIZE>(
+      &request_body,
+      ciphertext_digest,
+      (Some(&[]), Some(&self.0.response.body.json_path)),
+      &mut switchboard_inputs,
+    )?;
+
     let _ = Self::build_plaintext_authentication_circuit_inputs_noir::<CIRCUIT_SIZE>(
       response_inputs,
       ciphertext_digest,
       &mut switchboard_inputs,
     )?;
 
+    let (_, response_body) = Self::build_http_verification_circuit_inputs_noir::<CIRCUIT_SIZE>(
+      &response_inputs.plaintext,
+      ciphertext_digest,
+      &headers_digest,
+      &mut switchboard_inputs,
+    )?;
+
+    let _ = Self::build_json_extraction_circuit_inputs_noir::<CIRCUIT_SIZE>(
+      &response_body,
+      ciphertext_digest,
+      (None, Some(&self.0.response.body.json_path)),
+      &mut switchboard_inputs,
+    )?;
+
+    debug!("rom: {:?}", rom);
+    debug!("rom_data: {:?}", rom_data);
     for (i, input) in switchboard_inputs.iter_mut().enumerate() {
       let next_pc = if i < rom.len() - 1 {
         rom_data[&rom[i + 1]].opcode as i128
@@ -328,7 +357,7 @@ impl OrigoManifest {
       ).collect::<Vec<Vec<InputValue>>>();
 
       let counters = (0..pt_chunks.len())
-        .map(|num| InputValue::Field(GenericFieldElement::from(num)))
+        .map(|i| InputValue::Field(GenericFieldElement::from(1 + i * counter_step)))
         .collect::<Vec<InputValue>>();
 
       let key_u32_vec = to_u32_array(key)
@@ -369,16 +398,98 @@ impl OrigoManifest {
       plaintext_step_out += plaintext_digest;
     }
 
+    debug!("step_out: {:?}", plaintext_step_out - prev_ciphertext_digest);
     Ok(plaintext_step_out - prev_ciphertext_digest)
   }
 
+  fn build_http_verification_circuit_inputs_noir<const CIRCUIT_SIZE: usize>(
+    plaintext_chunks: &[Vec<u8>],
+    polynomial_input: F<G1>,
+    headers_digest: &[F<G1>],
+    switchboard_inputs: &mut Vec<BTreeMap<String, InputValue>>,
+  ) -> Result<(F<G1>, Vec<u8>), ProofError> {
+    let plaintext = plaintext_chunks.iter().flatten().cloned().collect::<Vec<u8>>();
+
+    let plaintext_digest = polynomial_digest(&plaintext, polynomial_input, 0);
+    let http_body = compute_http_witness(&plaintext, HttpMaskType::Body);
+    debug!("HTTP body: {:?}", http_body.len());
+    let http_body_digest = polynomial_digest(&http_body, polynomial_input, 0);
+
+    Ok((http_body_digest - plaintext_digest, http_body))
+  }
+
+  fn build_json_extraction_circuit_inputs_noir<const CIRCUIT_SIZE: usize>(
+    inputs: &[u8],
+    polynomial_input: F<G1>,
+    keys: (Option<&[JsonKey]>, Option<&[JsonKey]>),
+    switchboard_inputs: &mut Vec<BTreeMap<String, InputValue>>,
+  ) -> Result<F<G1>, ProofError> {
+    assert!(keys.1.is_some());
+    let response_keys = keys.1.unwrap();
+
+    let raw_response_json_machine =
+      RawJsonMachine::<MAX_STACK_HEIGHT>::from_chosen_sequence_and_input(
+        polynomial_input,
+        response_keys,
+      )?;
+    let sequence_digest = raw_response_json_machine.compress_tree_hash();
+
+    // check request keys, if present, then return empty value
+    // else compute the value digest
+    let value = match keys.0 {
+      Some(_) => vec![],
+      None => json_value_digest::<MAX_STACK_HEIGHT>(inputs, response_keys)?,
+    };
+    let value_digest = polynomial_digest(&value, polynomial_input, 0);
+
+    // no need to supply padded input as state is always from valid ascii
+    debug!("inputs: {:?}", inputs.len());
+    debug!("inputs: {:?}", inputs);
+    let states = parse::<MAX_STACK_HEIGHT>(inputs, polynomial_input)?;
+
+    for (i, pt) in inputs.chunks(CIRCUIT_SIZE).enumerate() {
+      let state = if i == 0 {
+        RawJsonMachine::initial_state()
+      } else {
+        RawJsonMachine::from(states[CIRCUIT_SIZE * i - 1].clone())
+      };
+
+      let state =
+        state.flatten().iter().map(|f| InputValue::Field(convert_to_acir_field(*f))).collect::<Vec<_>>();
+
+      let padded_plaintext = ByteOrPad::pad_to_nearest_multiple(pt, CIRCUIT_SIZE);
+      let pt_chunk = padded_plaintext
+        .iter()
+        .map(|x| match x {
+          ByteOrPad::Byte(b) => InputValue::Field(GenericFieldElement::from(*b as u32)),
+          ByteOrPad::Pad => InputValue::Field(GenericFieldElement::from(-1i128)),
+        })
+        .collect::<Vec<InputValue>>();
+
+      let mut private_input = BTreeMap::from([
+        (String::from(DATA_SIGNAL_NAME), InputValue::Vec(pt_chunk)),
+        (String::from("ciphertext_digest"), InputValue::Field(convert_to_acir_field(polynomial_input))),
+        (String::from("sequence_digest"), InputValue::Field(convert_to_acir_field(sequence_digest))),
+        (String::from("value_digest"), InputValue::Field(convert_to_acir_field(value_digest))),
+        (String::from("state"), InputValue::Vec(state)),
+      ]);
+
+      switchboard_inputs.push(private_input);
+    }
+
+    let data_digest = polynomial_digest(inputs, polynomial_input, 0);
+    Ok(value_digest - data_digest)
+  }
+
   /// Builds noir ROM for [`Manifest`] request and response
+  /// NOTE: For now, json op_code is 1 because http circuit is omitted.
   pub fn build_rom_noir<const CIRCUIT_SIZE: usize>(
     &self,
     request_inputs: &EncryptionInput,
     response_inputs: &EncryptionInput,
   ) -> NIVCRom {
     let plaintext_authentication_label = String::from("PLAINTEXT_AUTHENTICATION");
+    let json_extraction_label = String::from("JSON_EXTRACTION");
     let mut rom = vec![];
     // ------------------- Request -------------------
     let combined_request_plaintext_length: usize =
@@ -398,6 +509,19 @@ impl OrigoManifest {
       }
     }
 
+    let combined_request = request_inputs.plaintext.iter().flatten().cloned().collect::<Vec<u8>>();
+    // returns the masked HTTP request/response
+    // https://github.com/pluto/web-prover-circuits/blob/main/witness-generator/src/http/mod.rs#L143
+    let request_body = compute_http_witness(&combined_request, HttpMaskType::Body);
+    let request_json_circuit_count =
+      (request_body.len() as f64 / CIRCUIT_SIZE as f64).ceil() as usize;
+
+    (0..request_json_circuit_count).for_each(|i| {
+      let json_circuit = format!("{}_{}", json_extraction_label, i);
+      rom_data.insert(json_circuit.clone(), CircuitData { opcode: 1 });
+      rom.push(json_circuit);
+    });
+
     // ------------------- Response -------------------
     let combined_response_plaintext_length: usize =
         response_inputs.plaintext.iter().map(|x| x.len()).sum();
@@ -412,6 +536,18 @@ impl OrigoManifest {
         plaintext_circuit_counter += 1;
       }
     }
+
+    let combined_response =
+      response_inputs.plaintext.iter().flatten().cloned().collect::<Vec<u8>>();
+    let response_body = compute_http_witness(&combined_response, HttpMaskType::Body);
+    let response_json_circuit_count =
+      (response_body.len() as f64 / CIRCUIT_SIZE as f64).ceil() as usize;
+
+    (0..response_json_circuit_count).for_each(|i| {
+      let json_circuit = format!("{}_{}", json_extraction_label, i + request_json_circuit_count);
+      rom_data.insert(json_circuit.clone(), CircuitData { opcode: 1 });
+      rom.push(json_circuit);
+    });
 
     NIVCRom { circuit_data: rom_data, rom }
   }

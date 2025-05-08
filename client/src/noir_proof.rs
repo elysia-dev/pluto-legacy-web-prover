@@ -1,6 +1,7 @@
 use edge_frontend::program::{ROM, Switchboard};
 use edge_frontend::setup::Setup;
 use proofs::{program, program::manifest::{EncryptionInput, NIVCRom, OrigoManifest}};
+use proofs::circuits::{PLAINTEXT_AUTHENTICATION_NOIR_PROGRAM};
 use proofs::program::noir::initialize_circuit_list;
 use crate::{origo::OrigoProof, ClientErrors};
 
@@ -22,8 +23,7 @@ pub async fn construct_program_data_and_proof<const CIRCUIT_SIZE: usize>(
       &rom,
     )?;
 
-    // FIXME: use paths from NIVCRom
-    let noir_program_paths = vec!["./target/plaintext_authentication.json"];
+    let noir_program_paths = vec![PLAINTEXT_AUTHENTICATION_NOIR_PROGRAM];
     let noir_programs = initialize_circuit_list(&noir_program_paths);
 
     let initial_circuit_index = 0;
