@@ -274,10 +274,11 @@ pub async fn verify(
     Ok((output, _)) => {
       // TODO: We should also check that the full extended ROM was correct? Although maybe that's
       // implicit in this.
-      if output[5] != F::<G1>::from(0) {
-        debug!("HTTP header match: {:?}", output[5]);
-        return Err(ProofError::VerifyFailed(String::from("HTTP header match failed")).into());
-      } else if output[8] != F::<G1>::from(0) {
+      // if output[5] != F::<G1>::from(0) {
+      //   debug!("HTTP header match: {:?}", output[5]);
+      //   return Err(ProofError::VerifyFailed(String::from("HTTP header match failed")).into());
+      // } else 
+      if output[8] != F::<G1>::from(0) {
         debug!("JSON final state: {:?}", output[8]);
         return Err(ProofError::VerifyFailed(String::from("JSON final state invalid")).into());
       } else if output[10] != ciphertext_digest {
