@@ -87,11 +87,14 @@ pub(crate) async fn proxy_and_sign_and_generate_proof(
   config: config::Config,
   proving_params: Option<Vec<u8>>,
   setup_data: UninitializedSetup,
-) -> Result<OrigoProof, ClientErrors> {
+) -> Result<(OrigoProof, Vec<u8>), ClientErrors> {
   let session_id = config.session_id.clone();
+
+  // print session id
 
   #[cfg(not(target_arch = "wasm32"))]
   let (mut origo_conn, _) = crate::origo_native::proxy(config.clone(), session_id.clone()).await?;
+
   #[cfg(target_arch = "wasm32")]
   let (mut origo_conn, _) = crate::origo_wasm32::proxy(config.clone(), session_id.clone()).await?;
 
@@ -105,13 +108,21 @@ pub(crate) async fn proxy_and_sign_and_generate_proof(
   };
 
   let _sign_data = crate::origo::sign(config.clone(), session_id.clone(), sb).await;
+  println!("sign_data: {:?}", _sign_data);
 
+  debug!("_sign_data: {:?}", _sign_data);
+
+  // For request, response  ciphertext is populated using record.ciphertext as follows.
+  // witness: { aead_iv, aead_key, decrypt_chunk: { ciphertext, seq }}
   let witness = origo_conn.to_witness_data();
+  debug!("witness: {:?}", witness);
 
   // decrypt TLS ciphertext for request and response and create NIVC inputs
+  // request_inputs, response_inputs both have plaintext, cipherPlaintext -> make proof using these
   let TLSEncryption { request: request_inputs, response: response_inputs } =
     decrypt_tls_ciphertext(&witness)?;
 
+  // defined statically in 'client.origo_tcp_local.json'
   // generate NIVC proofs for request and response
   let manifest = config.proving.manifest.unwrap();
 
@@ -132,7 +143,7 @@ pub(crate) async fn proxy_and_sign_and_generate_proof(
 
   proof.value = Some(String::from_utf8_lossy(&value).into_owned());
 
-  Ok(proof)
+  Ok((proof, http_body))
 }
 
 pub(crate) async fn generate_proof(

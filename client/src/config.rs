@@ -16,6 +16,16 @@ use serde_with::{
 use url::Url;
 use web_prover_core::manifest::Manifest;
 
+use hmac::{Hmac, Mac};
+use sha2::Sha256;
+use url::form_urlencoded;
+
+use dotenv::dotenv;
+use std::env;
+
+type HmacSha256 = Hmac<Sha256>;
+
+
 use crate::errors::ClientErrors;
 
 /// Notary can run in multiple modes depending on the use case, each with its own trust assumptions.
@@ -73,6 +83,7 @@ pub struct Config {
 
   #[serde(skip)]
   pub session_id: String,
+
 }
 
 impl Config {
@@ -144,6 +155,8 @@ impl Config {
     Ok(target_url.scheme() == "https")
   }
 
+
+
   /// Converts the configuration into an HTTP request.
   ///
   /// This function constructs an HTTP request using the method, URL, headers, and body
@@ -160,8 +173,36 @@ impl Config {
   /// - Returns `ClientErrors::Other` if the host cannot be parsed.
   /// - Returns `ClientErrors::Other` if the body cannot be decoded from base64.
   pub fn to_request(&self) -> Result<Request<Full<Bytes>>, ClientErrors> {
+    // url should contains timestamp, recvWindow, signature
+    // https://api.binance.com/sapi/v1/pay/transactions?timestamp=1746009506041&recvWindow=60000&signature=c273da5460a3a0b5eb9b317527e5da99292dcab5edb1dac2d57500a7c7c70e45
+    fn generate_signature(query_string: &str, api_secret: String) -> String {
+      let mut mac = HmacSha256::new_from_slice(api_secret.as_bytes())
+          .expect("HMAC can take key of any size");
+      mac.update(query_string.as_bytes());
+      let result = mac.finalize();
+      let code_bytes = result.into_bytes();
+      hex::encode(code_bytes)
+    }
+
+    dotenv().ok();
+    let timestamp = chrono::Utc::now().timestamp_millis().to_string();
+    let recv_window = "60000"; // Increased to allow for multiple API calls
+    let mut params = HashMap::new();
+    params.insert("timestamp".to_string(), timestamp);
+    params.insert("recvWindow".to_string(), recv_window.to_string());
+
+    let mut pairs = form_urlencoded::Serializer::new(String::new());
+    for (key, value) in &params {
+        pairs.append_pair(key, value);
+    }
+    let query_string = pairs.finish();
+    
+    let api_secret = env::var("BINANCE_SECRET").expect("SECRET not found in environment");
+    let signature = generate_signature(&query_string, api_secret);
+    let url = format!("{}?{}&signature={}", self.target_url, query_string, signature);
+
     let mut request =
-      Request::builder().method(self.target_method.as_str()).uri(self.target_url.clone());
+      Request::builder().method(self.target_method.as_str()).uri(url);
 
     let h = request
       .headers_mut()
