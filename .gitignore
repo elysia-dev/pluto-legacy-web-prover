@@ -31,3 +31,5 @@ client_ios/demo/demo.xcodeproj/project.xcworkspace/xcshareddata/IDEWorkspaceChec
 
 # rust tools
 bacon.toml
+
+.env
