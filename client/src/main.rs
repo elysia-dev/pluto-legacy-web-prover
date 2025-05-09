@@ -11,6 +11,17 @@ struct Args {
 
   #[clap(short, long, required = true, default_value = "config.json")]
   config: String,
+
+  // !NOTE: for noir hackathon
+  #[clap( long, required = true)]
+  from_binance_id: String,
+  #[clap( long, required = true)]
+  receiver_binance_id: String,
+  #[clap( long, required = true)]
+  amount: String,
+  #[clap( long, required = true)]
+  currency: String,
+
 }
 
 #[tokio::main]
