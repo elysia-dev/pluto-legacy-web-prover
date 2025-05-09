@@ -34,8 +34,9 @@ async fn main() -> Result<(), ClientErrors> {
   config.set_session_id();
 
   let proving_params = std::fs::read(proofs::circuits::PROVING_PARAMS_512)?;
-  let proof = client::prover_inner(config, Some(proving_params), None).await?;
+
+  let proof = client::prover_inner(config, Some(proving_params), None).await.unwrap();
   let proof_json = serde_json::to_string_pretty(&proof)?;
-  println!("Proving Successful: proof_len={:?}", proof_json.len());
+
   Ok(())
 }

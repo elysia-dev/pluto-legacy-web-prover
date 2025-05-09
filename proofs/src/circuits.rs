@@ -6,7 +6,7 @@
 
 use std::fs;
 
-use tracing::info;
+use tracing::{ info };
 
 use crate::{
   errors::ProofError,
@@ -28,8 +28,11 @@ pub const MAX_STACK_HEIGHT: usize = 12;
 pub const PROVING_PARAMS_512: &str = concat!(
   "proofs/web_proof_circuits/circom-artifacts-512b-v",
   env!("WEB_PROVER_CIRCUITS_VERSION"),
+  // 512 means that we have compiled a circuit that handles a total of 512 bytes, i.e. 512/64 = 8 blocks.
   "/serialized_setup_512b_rom_length_100.bin"
 );
+
+
 /// Proving parameters bytes
 #[cfg(not(target_arch = "wasm32"))]
 pub fn load_proving_params_512() -> Result<Vec<u8>, std::io::Error> {

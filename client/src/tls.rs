@@ -1,3 +1,4 @@
+use tracing::{debug, info};
 // TODO many root_stores ... this could use some cleanup where possible
 use proofs::program::manifest::{EncryptionInput, TLSEncryption};
 use tls_client2::{
@@ -5,7 +6,6 @@ use tls_client2::{
   CipherSuite, CipherSuiteKey, Decrypter, ProtocolVersion,
 };
 use tls_core::msgs::{base::Payload, enums::ContentType, message::OpaqueMessage};
-use tracing::debug;
 
 use crate::errors::ClientErrors;
 
@@ -98,7 +98,13 @@ pub(crate) fn decrypt_tls_ciphertext(witness: &WitnessData) -> Result<TLSEncrypt
 
   // Request Preparation
   let request_key = parse_cipher_key(&witness.request.aead_key)?;
+
+  info!("request_key: {:?}", hex::encode(&request_key));
+
+
   let request_iv: [u8; 12] = witness.request.aead_iv[..12].try_into()?;
+
+  info!("request_iv: {:?}", request_iv);
   let (request_ciphertext, request_plaintext): (Vec<_>, Vec<_>) = witness
     .request
     .decrypt_chunk
