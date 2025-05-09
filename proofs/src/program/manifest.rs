@@ -269,12 +269,13 @@ impl OrigoManifest {
       &mut switchboard_inputs,
     )?;
 
-    let _ = Self::build_json_extraction_circuit_inputs_noir::<CIRCUIT_SIZE>(
-      &request_body,
-      ciphertext_digest,
-      (Some(&[]), Some(&self.0.response.body.json_path)),
-      &mut switchboard_inputs,
-    )?;
+    // TODO:
+    // let _ = Self::build_json_extraction_circuit_inputs_noir::<CIRCUIT_SIZE>(
+    //   &request_body,
+    //   ciphertext_digest,
+    //   (Some(&[]), Some(&self.0.response.body.json_path)),
+    //   &mut switchboard_inputs,
+    // )?;
 
     let _ = Self::build_plaintext_authentication_circuit_inputs_noir::<CIRCUIT_SIZE>(
       response_inputs,
@@ -289,12 +290,14 @@ impl OrigoManifest {
       &mut switchboard_inputs,
     )?;
 
-    let _ = Self::build_json_extraction_circuit_inputs_noir::<CIRCUIT_SIZE>(
-      &response_body,
-      ciphertext_digest,
-      (None, Some(&self.0.response.body.json_path)),
-      &mut switchboard_inputs,
-    )?;
+    // TODO
+    // let _ = Self::build_json_extraction_circuit_inputs_noir::<CIRCUIT_SIZE>(
+    //   &response_body,
+    //   ciphertext_digest,
+    //   (None, Some(&self.0.response.body.json_path)),
+    //   &mut switchboard_inputs,
+    // )?;
+
 
     debug!("rom: {:?}", rom);
     debug!("rom_data: {:?}", rom_data);
@@ -771,7 +774,7 @@ fn build_plaintext_authentication_circuit_inputs<const CIRCUIT_SIZE: usize>(
   debug!("ciphertext: {:?}", inputs.ciphertext);
   assert_eq!(key.len(), 32, "Only CHACHA20POLY1305 is supported for now");
 
-  let counter_step = CIRCUIT_SIZE / 64;
+  let counter_step = CIRCUIT_SIZE / 64; // 512 bytes
 
   let mut curr_plaintext_index = 0;
   let mut prev_ciphertext_digest = F::<G1>::ZERO;

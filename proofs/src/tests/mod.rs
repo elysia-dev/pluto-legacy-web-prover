@@ -186,13 +186,11 @@ async fn test_end_to_end_proofs_rom() {
   let compressed_proof = program::noir::compress_proof(&setup, &recursive_snark).unwrap();
 
   // Verify
-  /*
-  let path = std::path::PathBuf::from("../target/setup.bytes");
+  let path = std::path::PathBuf::from("../build/setup.bytes");
   let vsetup = Setup::load_file(&path).unwrap();
   let noir_programs = initialize_circuit_list(&noir_program_paths);
   let vswitchboard = Switchboard::<Configuration>::new(noir_programs);
-  let vsetup = vsetup.into_ready(switchboard);
-  */
+  let vsetup = vsetup.into_ready(vswitchboard);
 
   let vk = setup.verifier_key().unwrap();
 
@@ -242,7 +240,7 @@ async fn test_end_to_end_proofs_ram() {
   let compressed_proof = program::noir::compress_proof(&setup, &recursive_snark).unwrap();
 
   // Verify
-  let path = std::path::PathBuf::from("../target/setup.bytes");
+  let path = std::path::PathBuf::from("../build/setup.bytes");
   let vsetup = Setup::load_file(&path).unwrap();
   let noir_programs = initialize_circuit_list(&noir_program_paths);
   let vswitchboard = Switchboard::<Configuration>::new(noir_programs);
@@ -265,7 +263,7 @@ async fn test_plaintext_authentication_noir_store_setup() {
   use web_prover_core::test_utils::TEST_MANIFEST;
 
   // TODO: later change to 256 or 512
-  const CIRCUIT_SIZE_NOIR: usize = 64;
+  const CIRCUIT_SIZE_NOIR: usize = 512;
   debug!("Creating `private_inputs`...");
 
   let request_inputs = one_block_request_inputs();
@@ -286,7 +284,7 @@ async fn test_plaintext_authentication_noir_store_setup() {
   debug!("circuit_data: {:?}", rom_data);
   debug!("rom: {:?}", rom);
 
-  let noir_program_paths = vec!["../target/plaintext_authentication_64.json"];
+  let noir_program_paths = vec!["../target/plaintext_authentication.json"];
   let noir_programs = initialize_circuit_list(&noir_program_paths);
   let (switchboard_inputs, initial_nivc_input) = manifest.build_switchboard_inputs::<CIRCUIT_SIZE_NOIR>(
     &request_inputs,
@@ -310,7 +308,7 @@ async fn test_plaintext_authentication_noir_store_setup() {
   // Step 3: Initialize the setup
   debug!("Setup::new(switchboard)");
   let setup = Setup::new(switchboard).unwrap();
-  setup.store_file(&std::path::PathBuf::from("../target/setup.bytes")).unwrap();
+  setup.store_file(&std::path::PathBuf::from("../build/setup.bytes")).unwrap();
 }
 
 
@@ -487,7 +485,7 @@ async fn test_end_to_end_proofs_get_noir() {
 
   let noir_program_paths = vec![
     "../target/plaintext_authentication.json",
-    "../target/json_extraction.json",
+    // "../target/json_extraction.json",
   ];
   let noir_programs = initialize_circuit_list(&noir_program_paths);
   let (switchboard_inputs, initial_nivc_input) = manifest.build_switchboard_inputs::<CIRCUIT_SIZE>(
@@ -523,7 +521,7 @@ async fn test_end_to_end_proofs_get_noir() {
   let compressed_proof = program::noir::compress_proof(&setup, &recursive_snark).unwrap();
 
   // Verify
-  let path = std::path::PathBuf::from("../target/setup.bytes");
+  let path = std::path::PathBuf::from("../build/setup.bytes");
   let vsetup = Setup::load_file(&path).unwrap();
   let noir_programs = initialize_circuit_list(&noir_program_paths);
   let vswitchboard = Switchboard::<Configuration>::new(noir_programs);

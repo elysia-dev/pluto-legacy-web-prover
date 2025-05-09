@@ -13,7 +13,7 @@ use proofs::{
   E1, F, G1, G2, S1, S2,
 };
 use tracing::{debug, info};
-use proofs::circuits::{PLAINTEXT_AUTHENTICATION_NOIR_PROGRAM};
+use proofs::circuits::{PLAINTEXT_AUTHENTICATION_NOIR_PROGRAM, NOIR_SETUP_PATH};
 use proofs::program::noir::initialize_circuit_list;
 use crate::errors::ProxyError;
 
@@ -39,7 +39,7 @@ pub fn flatten_rom(rom: Vec<String>) -> Vec<String> {
 pub fn initialize_noir_verifier() -> Result<Setup<Ready<Configuration>>, ProxyError> {
   let noir_program_paths = vec![PLAINTEXT_AUTHENTICATION_NOIR_PROGRAM];
   // Verify
-  let path = std::path::PathBuf::from("./target/setup.bytes");
+  let path = std::path::PathBuf::from(NOIR_SETUP_PATH);
   let vsetup = Setup::load_file(&path).unwrap();
   let noir_programs = initialize_circuit_list(&noir_program_paths);
   let vswitchboard = Switchboard::<Configuration>::new(noir_programs);

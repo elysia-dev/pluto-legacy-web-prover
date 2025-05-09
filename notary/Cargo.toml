@@ -14,7 +14,11 @@ tlsn-core  ={ workspace=true }
 tlsn-common={ workspace=true }
 chrono     ={ workspace=true }
 
-edge-frontend={ git="https://github.com/pluto/edge.git", rev="cb2c3b5df4cabe7e7bd150f0a5de51669f8409db"}
+edge-prover={ git="https://github.com/elysia-dev/pluto-edge", rev="9e3e2324a118e65e71d34cd44a37acffb30b2c45" }
+edge-frontend={ git="https://github.com/elysia-dev/pluto-edge", rev="9e3e2324a118e65e71d34cd44a37acffb30b2c45" }
+# For local dev
+# edge-frontend={ path = "../../edge/frontend" }
+# edge-prover={ path = "../../edge/prover"}
 proofs={ workspace=true }
 client={ workspace=true }
 web-prover-core={ workspace=true }

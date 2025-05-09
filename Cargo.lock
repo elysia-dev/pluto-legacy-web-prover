@@ -1706,8 +1706,8 @@ dependencies = [
  "chrono",
  "clap 4.5.23",
  "console_error_panic_hook",
- "edge-frontend 0.1.0",
- "edge-prover 0.1.0",
+ "edge-frontend",
+ "edge-prover",
  "elliptic-curve 0.13.8",
  "futures",
  "getrandom 0.2.15",
@@ -2579,28 +2579,12 @@ dependencies = [
 [[package]]
 name = "edge-frontend"
 version = "0.1.0"
+source = "git+https://github.com/elysia-dev/pluto-edge?rev=9e3e2324a118e65e71d34cd44a37acffb30b2c45#9e3e2324a118e65e71d34cd44a37acffb30b2c45"
 dependencies = [
  "acvm",
  "ark-bn254 0.5.0",
  "bellpepper-core",
- "edge-prover 0.1.0",
- "halo2curves",
- "noirc_abi",
- "serde",
- "serde_json",
- "thiserror 1.0.69",
- "tracing",
-]
-
-[[package]]
-name = "edge-frontend"
-version = "0.1.0"
-source = "git+https://github.com/pluto/edge.git?rev=cb2c3b5df4cabe7e7bd150f0a5de51669f8409db#cb2c3b5df4cabe7e7bd150f0a5de51669f8409db"
-dependencies = [
- "acvm",
- "ark-bn254 0.5.0",
- "bellpepper-core",
- "edge-prover 0.1.0 (git+https://github.com/pluto/edge.git?rev=cb2c3b5df4cabe7e7bd150f0a5de51669f8409db)",
+ "edge-prover",
  "halo2curves",
  "noirc_abi",
  "serde",
@@ -2612,46 +2596,7 @@ dependencies = [
 [[package]]
 name = "edge-prover"
 version = "0.1.0"
-dependencies = [
- "bellpepper",
- "bellpepper-core",
- "bincode",
- "bitvec",
- "byteorder",
- "cfg-if",
- "digest 0.10.7",
- "ff 0.13.0",
- "generic-array 1.1.1",
- "getrandom 0.2.15",
- "group 0.13.0",
- "grumpkin-msm",
- "halo2curves",
- "itertools 0.13.0",
- "neptune",
- "num-bigint 0.4.6",
- "num-integer",
- "num-traits",
- "once_cell",
- "pairing",
- "proptest",
- "rand 0.8.5",
- "rand_chacha 0.3.1",
- "rand_core 0.6.4",
- "rayon",
- "rayon-scan",
- "ref-cast",
- "serde",
- "sha3",
- "static_assertions",
- "subtle",
- "thiserror 1.0.69",
- "tracing",
-]
-
-[[package]]
-name = "edge-prover"
-version = "0.1.0"
-source = "git+https://github.com/pluto/edge.git?rev=cb2c3b5df4cabe7e7bd150f0a5de51669f8409db#cb2c3b5df4cabe7e7bd150f0a5de51669f8409db"
+source = "git+https://github.com/elysia-dev/pluto-edge?rev=9e3e2324a118e65e71d34cd44a37acffb30b2c45#9e3e2324a118e65e71d34cd44a37acffb30b2c45"
 dependencies = [
  "bellpepper",
  "bellpepper-core",
@@ -4707,7 +4652,8 @@ dependencies = [
  "clap 4.5.23",
  "client",
  "config",
- "edge-frontend 0.1.0 (git+https://github.com/pluto/edge.git?rev=cb2c3b5df4cabe7e7bd150f0a5de51669f8409db)",
+ "edge-frontend",
+ "edge-prover",
  "eyre",
  "futures",
  "futures-util",
@@ -5567,8 +5513,8 @@ dependencies = [
  "cargo_metadata",
  "circom_witnesscalc",
  "derive_more 2.0.1",
- "edge-frontend 0.1.0",
- "edge-prover 0.1.0",
+ "edge-frontend",
+ "edge-prover",
  "ff 0.13.0",
  "halo2curves",
  "hex",
