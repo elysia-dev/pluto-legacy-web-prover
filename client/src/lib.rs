@@ -210,22 +210,21 @@ pub async fn prover_inner_origo(
 
   let args = Args::parse();
 
+  let from_binance_id = args.from_binance_id.clone();
+  let amount = args.amount.clone();
+  let currency = args.currency.clone();
+  let receiver_binance_id = args.receiver_binance_id.clone();
 
-    let from_binance_id = args.from_binance_id.clone();
-    let amount = args.amount.clone();
-    let currency = args.currency.clone();
-    let receiver_binance_id = args.receiver_binance_id.clone();
+  let base_amount = 1;
 
-    let base_amount = 1;
+  let amount_number = amount.parse::<u64>().unwrap();
+  let amount_u256 = U256::from(amount_number * 1_000_000);
 
-    let amount_number = amount.parse::<u64>().unwrap();
-    let amount_u256 = U256::from(amount_number * 1_000_000);
-
-    // when Using fixed inputs
-    // let amount = String::from(base_amount.to_string());
-    // let currency = String::from("USDT");
-    // let receiver_binance_id = 93260646;
-    // let from_binance_id = "71035696".to_string();  
+  // when Using fixed inputs
+  // let amount = String::from(base_amount.to_string());
+  // let currency = String::from("USDT");
+  // let receiver_binance_id = 93260646;
+  // let from_binance_id = "71035696".to_string();
 
   let session_id = config.session_id.clone();
 
@@ -291,7 +290,7 @@ pub async fn prover_inner_origo(
     Ok(tx_hash) => {
       let soneium_base_url = "https://soneium-minato.blockscout.com/tx/0x";
       let soneium_tx_url = format!("{}{}", soneium_base_url, hex::encode(tx_hash));
-  
+
       println!("#6. claim success: {}", soneium_tx_url);
     }
     Err(e) => println!("#6. claim failed: {}", e),
@@ -421,8 +420,8 @@ pub async fn verify<T: Serialize>(
 ///
 /// * `Result<bool, String>` - Ok(true) if valid payment history exists, Ok(false) if not, Err on error
 fn has_valid_payment_history(
-    http_body: &[u8], 
-    from_binance_id: String, 
+    http_body: &[u8],
+    from_binance_id: String,
     amount: String,
     currency: String,
     receiver_binance_id: String,
@@ -432,7 +431,7 @@ fn has_valid_payment_history(
         Ok(s) => s,
         Err(e) => return Err(format!("UTF-8 conversion error: {}", e)),
     };
-    
+
     let response: Response = match serde_json::from_str(body_str) {
       Ok(resp) => resp,
       Err(e) => {
@@ -440,17 +439,17 @@ fn has_valid_payment_history(
           return Err(format!("Failed to parse response: {}", e));
       }
   };
-  
+
   if response.code != "000000" {
       println!("Invalid response code: {}", response.code);
       return Err(format!("Invalid response code: {}", response.code));
   }
-  
+
   if response.data.is_empty() {
       println!("No payment data found");
       return Err(format!("No payment data found"));
   }
-    
+
   // Find any transaction that matches our criteria
   for payment in response.data {
 
@@ -476,12 +475,12 @@ fn has_valid_payment_history(
     println!("currency: {:?}", currency);
 
     // !NOTE: skip amount check: for demo
-    // amount_from_json == amount 
+    // amount_from_json == amount
     if  payer_binance_id_from_json == from_binance_id && receiver_binance_id_from_json == receiver_binance_id && currency_from_json == currency {
         return Ok(true);
     }
   }
-    
+
   // No matching payment history found
   Ok(false)
 }

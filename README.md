@@ -1,4 +1,4 @@
-# Noir Hackathon Participation!
+# Noir Hackathon Participation
 
 🧞‍♂️ **Genie** is a zk-TLS based on-ramp system that bridges Web2 payments (e.g. Binance) to on-chain assets.
 
@@ -13,7 +13,7 @@ However, the circuit used in the legacy code is made with circom base.
 
 ### What we implemented
 
-We implemented a noir-based zk-tls circuit at https://github.com/elysia-dev/noir-web-prover-circuits.
+We implemented a noir-based zk-tls circuit at <https://github.com/elysia-dev/noir-web-prover-circuits>.
 
 To run this code in the current codebase(legacy-web-prover), we need to implement new interface.
 So We implemented a SuperNova interface that takes a noir file as input.
@@ -30,17 +30,19 @@ cargo run -p notary -- --config ./fixture/notary-config.toml
 
 Run binance client (example)
 
+We used [Binance `/pay/transactions`](https://developers.binance.com/docs/pay/rest-api).
+
 ```sh
 run -p client -- --config ./fixture/client.origo_tcp_local_binance.json --log-level=INFO --from-binance-id 93260646 --receiver-binance-id 71035696 --currency USDT --amount 1
 ```
 
-### To run project...
+### To Run the demo
 
 The actual execution of this package is a bit complicated.
 We haven't implemented generating proofs in the browser yet, so calling it from the command line to generate/prove the proofs contains a lot of private data in the env, so We couldn't package it all at once and upload it.
 So you need to follow the steps below to reproduce the process shown in the demo.
 
-1. in genie vault(https://github.com/elysia-dev/zk-vault)
+1. in genie vault(<https://github.com/elysia-dev/zk-vault>)
    Deploy the vault. Make sure to put the private_key that will be used as the contract owner in the env.
 
 2. in legacy-web-prover
@@ -55,4 +57,4 @@ So you need to follow the steps below to reproduce the process shown in the demo
 4. in legacy-web-prover
    In the script that calls client Replace receiver-binance-id with the ID of the BINANCE account that issued the API.
    ex.
-   `cargo -p client -- --config ./fixture/client.origo_tcp_local_binance.json --log-level=INFO --from-binance-id 93260646 --receiver-binance-id 71035696 --currency USDT --amount 1`
+   `cargo run -p client -- --config ./fixture/client.origo_tcp_local_binance.json --log-level=INFO --from-binance-id 93260646 --receiver-binance-id 71035696 --currency USDT --amount 1`

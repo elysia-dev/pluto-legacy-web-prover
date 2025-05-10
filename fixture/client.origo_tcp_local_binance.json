@@ -14,27 +14,15 @@
 	"proving": {
 		"manifest": {
 			"manifestVersion": "1",
-			"id": "reddit-user-karma",
-			"title": "Total Reddit Karma",
-			"description": "Generate a proof that you have a certain amount of karma",
+			"id": "binance-pay-transactions",
+			"title": "Binance Pay Transactions",
+			"description": "Generate a proof that you have a certain amount of transactions",
 			"prepareUrl": "https://api.binance.com/sapi/v1/pay/transactions",
 			"request": {
 				"method": "GET",
 				"version": "HTTP/1.1",
 				"url": "https://api.binance.com/sapi/v1/pay/transactions",
-				"headers": {},
-				"body": {
-					"userId": "<% userId %>"
-				},
-				"vars": {
-					"userId": {
-						"regex": "[a-z]{,20}+"
-					},
-					"token": {
-						"type": "base64",
-						"length": 32
-					}
-				}
+				"headers": {}
 			},
 			"response": {
 				"status": "200",
