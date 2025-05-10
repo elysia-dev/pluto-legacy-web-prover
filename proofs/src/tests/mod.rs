@@ -23,6 +23,7 @@ use inputs::{
 use web_proof_circuits_witness_generator::polynomial_digest;
 
 use super::*;
+use crate::circuits::PLAINTEXT_AUTHENTICATION_NOIR_PROGRAM;
 use crate::{
   circuits::load_artifact_bytes,
   program::{
@@ -79,6 +80,8 @@ pub const JSON_EXTRACTION_256B_GRAPH: &[u8] = include_bytes!(concat!(
   env!("WEB_PROVER_CIRCUITS_VERSION"),
   "/json_extraction_256b.bin"
 ));
+
+const PLAINTEXT_AUTHENTICATION_64_NOIR_PROGRAM: &str = "../build/plaintext_authentication_64.json";
 
 const MAX_ROM_LENGTH: usize = 100;
 
@@ -208,7 +211,7 @@ async fn test_end_to_end_proofs_rom() {
 #[tracing_test::traced_test]
 async fn test_end_to_end_proofs_ram() {
   // Step 1: Create demo programs
-  let noir_program_paths = vec!["../target/collatz_even.json", "../target/collatz_odd.json"];
+  let noir_program_paths = vec!["../build/collatz_even.json", "../build/collatz_odd.json"];
   let noir_programs = initialize_circuit_list(&noir_program_paths);
   // 42 -> 21 -> 64 -> 32 -> 16 -> 8 -> 4 -> 2 -> 1
   let input = 42;
@@ -254,6 +257,7 @@ async fn test_end_to_end_proofs_ram() {
   debug!("z0_secondary: {:?}", Z0_SECONDARY); // 0
   let (zn_primary, zn_secondary) = compressed_proof.proof.verify(&vsetup.params, &vk, &z0_primary, Z0_SECONDARY).unwrap();
 
+  // expected result: 1
   assert_eq!(zn_primary[0], Scalar::from(1));
 }
 
@@ -262,7 +266,6 @@ async fn test_end_to_end_proofs_ram() {
 async fn test_plaintext_authentication_noir_store_setup() {
   use web_prover_core::test_utils::TEST_MANIFEST;
 
-  // TODO: later change to 256 or 512
   const CIRCUIT_SIZE_NOIR: usize = 512;
   debug!("Creating `private_inputs`...");
 
@@ -284,7 +287,8 @@ async fn test_plaintext_authentication_noir_store_setup() {
   debug!("circuit_data: {:?}", rom_data);
   debug!("rom: {:?}", rom);
 
-  let noir_program_paths = vec!["../target/plaintext_authentication.json"];
+  let formatted_path = format!("../{}", PLAINTEXT_AUTHENTICATION_NOIR_PROGRAM);
+  let noir_program_paths = vec![formatted_path.as_str()];
   let noir_programs = initialize_circuit_list(&noir_program_paths);
   let (switchboard_inputs, initial_nivc_input) = manifest.build_switchboard_inputs::<CIRCUIT_SIZE_NOIR>(
     &request_inputs,
@@ -422,7 +426,7 @@ async fn test_end_to_end_proofs_plaintext_authentication_noir_split() {
   debug!("circuit_data: {:?}", rom_data);
   debug!("rom: {:?}", rom);
 
-  let noir_program_paths = vec!["../target/plaintext_authentication_64.json"];
+  let noir_program_paths = vec![PLAINTEXT_AUTHENTICATION_64_NOIR_PROGRAM];
   let noir_programs = initialize_circuit_list(&noir_program_paths);
   let (switchboard_inputs, initial_nivc_input) = manifest.build_switchboard_inputs::<CIRCUIT_SIZE>(
     &request_inputs,
@@ -483,9 +487,10 @@ async fn test_end_to_end_proofs_get_noir() {
   debug!("circuit_data: {:?}", rom_data);
   debug!("rom: {:?}", rom);
 
+  let formatted_path = format!("../{}", PLAINTEXT_AUTHENTICATION_NOIR_PROGRAM);
   let noir_program_paths = vec![
-    "../target/plaintext_authentication.json",
-    // "../target/json_extraction.json",
+    formatted_path.as_str()
+    // TODO: later add json extraction
   ];
   let noir_programs = initialize_circuit_list(&noir_program_paths);
   let (switchboard_inputs, initial_nivc_input) = manifest.build_switchboard_inputs::<CIRCUIT_SIZE>(

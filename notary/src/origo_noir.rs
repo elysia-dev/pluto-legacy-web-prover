@@ -70,10 +70,6 @@ pub async fn verify(
     )?;
   assert_eq!(ciphertext_digest, expected_ciphertext_digest);
 
-  // let (z0_primary, _) = verifier.setup_params.extend_public_inputs(
-  //   &origo_verifier::flatten_rom(payload.origo_proof.rom.rom),
-  //   &initial_nivc_input.to_vec(),
-  // )?;
   let z0_secondary = vec![F::<G2>::from(0)];
 
   let verify_output = match proof.proof.verify(
@@ -107,13 +103,14 @@ pub async fn verify(
           0,
         );
 
-        if output[0] != value_digest {
-          debug!("output[0]: {:?}", output[0]);
-          debug!("value: {:?}", value);
-          debug!("value_polynomial_digest: {:?}", value_digest);
+        // TODO: uncomment after adding json extraction circuit
+        // if output[0] != value_digest {
+        //   debug!("output[0]: {:?}", output[0]);
+        //   debug!("value: {:?}", value);
+        //   debug!("value_polynomial_digest: {:?}", value_digest);
 
-          return Err(ProofError::VerifyFailed(String::from("inccorect final circuit value")).into());
-        }
+        //   return Err(ProofError::VerifyFailed(String::from("inccorect final circuit value")).into());
+        // }
 
         // TODO: add the manifest digest?
         debug!("output from verifier: {output:?}");
