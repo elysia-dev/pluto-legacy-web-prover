@@ -58,6 +58,7 @@ async fn handle_origo_mode(
   let origo_conn = Arc::new(std::sync::Mutex::new(OrigoConnection::new()));
   let client = tls_client2::ClientConnection::new(
     Arc::new(client_config),
+    // Store all the payload iv, key received during request.
     Box::new(tls_client2::RustCryptoBackend13::new(origo_conn.clone())),
     tls_client2::ServerName::try_from(config.target_host()?.as_str()).unwrap(),
   )?;
@@ -110,6 +111,10 @@ async fn handle_origo_mode(
     .header("Upgrade", "TCP")
     .body(http_body_util::Full::default())?;
 
+    // send_request 1. 
+    // to notary server  <- request upgrading protocol HTTP -> TCP(socket) 
+    // response expected: 101 Switching Protocols
+    // after this, connected to notary server
   let response = request_sender.send_request(request).await?;
   assert_eq!(response.status(), hyper::StatusCode::SWITCHING_PROTOCOLS);
 
@@ -143,10 +148,15 @@ async fn handle_origo_mode(
   };
   tokio::spawn(handled_connection_fut);
 
+  // send_request 2.
+  // target: end-server(target_host: target_port)
+  // request generated from 'config.to_request()'
+
   let response = request_sender.send_request(config.to_request()?).await?;
   assert_eq!(response.status(), StatusCode::OK);
 
   let payload = response.into_body().collect().await?.to_bytes();
+  // Response: b"{\"head\":{\"status\":\"200\",\"data\":{}},\"body\":[]}"
   debug!("Response: {:?}", payload);
 
   // Close the connection to the server

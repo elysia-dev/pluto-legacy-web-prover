@@ -770,8 +770,8 @@ fn build_plaintext_authentication_circuit_inputs<const CIRCUIT_SIZE: usize>(
   debug!("iv: {:?}", inputs.iv);
   debug!("seq: {:?}", inputs.seq);
   debug!("aad: {:?}", inputs.aad);
-  debug!("plaintext: {:?}", inputs.plaintext);
-  debug!("ciphertext: {:?}", inputs.ciphertext);
+  // debug!("plaintext: {:?}", inputs.plaintext);
+  // debug!("ciphertext: {:?}", inputs.ciphertext);
   assert_eq!(key.len(), 32, "Only CHACHA20POLY1305 is supported for now");
 
   let counter_step = CIRCUIT_SIZE / 64; // 512 bytes
@@ -848,8 +848,6 @@ fn build_http_verification_circuit_inputs<const CIRCUIT_SIZE: usize>(
 ) -> Result<(F<G1>, Vec<u8>), ProofError> {
   // pad request plaintext and ciphertext to circuit size
   let plaintext = plaintext_chunks.iter().flatten().cloned().collect::<Vec<u8>>();
-  debug!("plaintext: {:?}", plaintext.len());
-  debug!("plaintext: {:?}", plaintext);
 
   let mut main_digests =
     headers_digest.iter().map(|h| field_element_to_base10_string(*h)).collect::<Vec<_>>();
