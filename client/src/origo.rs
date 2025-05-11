@@ -82,12 +82,12 @@ pub async fn sign(
   Ok(sign_response)
 }
 
-pub(crate) async fn proxy_and_sign_and_generate_proof_noir(
+pub async fn proxy_and_sign_and_generate_proof_noir(
   config: config::Config,
   // TODO: reuse the initialized setup
   // proving_params: Option<Vec<u8>>,
   // setup_data: UninitializedSetup,
-) -> Result<OrigoProof, ClientErrors> {
+) -> Result<(OrigoProof, Vec<u8>), ClientErrors> {
   let session_id = config.session_id.clone();
 
   #[cfg(not(target_arch = "wasm32"))]
@@ -127,7 +127,8 @@ pub(crate) async fn proxy_and_sign_and_generate_proof_noir(
 
   proof.value = Some(String::from_utf8_lossy(&value).into_owned());
 
-  Ok(proof)
+  // NOTE: Temporarily return http_body to parse outside. Delete after json circuit.
+  Ok((proof, http_body))
 }
 
 // TODO: We probably don't need to call this "proxy_and_sign" since we don't sign in here

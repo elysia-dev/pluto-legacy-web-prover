@@ -84,10 +84,6 @@ chrono    ={ workspace=true }
 clap      ={ workspace=true }
 serde_with={ version="3.12.0", features=["base64"] }
 
-# Blockchain
-ethers = { version = "2.0", features = ["legacy"] }
-eyre = "0.6"
-
 ####################################################################################################
 # Target-specific configuration
 ####################################################################################################

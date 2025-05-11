@@ -3,7 +3,7 @@ name   ="webprover"
 edition="2021"
 
 [workspace]
-members =["client", "client_ios", "client_wasm", "notary", "proofs", "web-prover-core", "tests", "rust_binance"]
+members =["client", "client_ios", "client_wasm", "notary", "proofs", "web-prover-core", "tests", "demo"]
 resolver="2"
 
 [workspace.metadata]

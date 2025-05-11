@@ -15,7 +15,7 @@ pub struct Balances {
 
 pub async fn check_usdt_balance() -> Result<Balances> {
   dotenv().ok();
-  
+
   let rpc_url = env::var("MINATO_RPC_URL").expect("MINATO_RPC_URL must be set");
   let private_key = env::var("PRIVATE_KEY").expect("PRIVATE_KEY must be set");
   let usdt_address = env::var("MINATO_USDT_ADDRESS").expect("MINATO_USDT_ADDRESS must be set");
@@ -24,14 +24,13 @@ pub async fn check_usdt_balance() -> Result<Balances> {
 
   let client = get_client(&rpc_url, &private_key).await?;
   let usdt = get_erc20(client.clone(), usdt_address.parse::<Address>()?);
-  
+
   // Check balances
   let vault_balance = usdt.balance_of(vault_address.parse::<Address>()?).call().await?;
   let sender_address = client.address();
   let sender_balance = usdt.balance_of(sender_address).call().await?;
   let recipient_balance = usdt.balance_of(recipient_address.parse::<Address>()?).call().await?;
-  
-  
+
   // return balances
   let balances = Balances {
     vault_balance: vault_balance.as_u64(),
@@ -39,4 +38,4 @@ pub async fn check_usdt_balance() -> Result<Balances> {
     recipient_balance: recipient_balance.as_u64(),
   };
   Ok(balances)
-} 
+}

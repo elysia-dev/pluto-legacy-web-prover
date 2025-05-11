@@ -1770,8 +1770,6 @@ dependencies = [
  "edge-frontend",
  "edge-prover",
  "elliptic-curve 0.13.8",
- "ethers",
- "eyre",
  "futures",
  "getrandom 0.2.15",
  "hex",
@@ -2436,6 +2434,30 @@ name = "data-encoding"
 version = "2.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e8566979429cf69b49a5c740c60791108e86440e8be149bbea4fe54d2c32d6e2"
+
+[[package]]
+name = "demo"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "clap 4.5.23",
+ "client",
+ "dotenv",
+ "ethers",
+ "eyre",
+ "hex",
+ "hmac",
+ "proofs",
+ "reqwest 0.11.27",
+ "rustls 0.23.19",
+ "serde",
+ "serde_json",
+ "sha2",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+ "url",
+]
 
 [[package]]
 name = "der"
@@ -7014,22 +7036,6 @@ checksum = "3e0698206bcb8882bf2a9ecb4c1e7785db57ff052297085a6efd4fe42302068a"
 dependencies = [
  "cfg-if",
  "ordered-multimap",
-]
-
-[[package]]
-name = "rust_binance"
-version = "0.1.0"
-dependencies = [
- "chrono",
- "dotenv",
- "hex",
- "hmac",
- "reqwest 0.11.27",
- "serde",
- "serde_json",
- "sha2",
- "tokio",
- "url",
 ]
 
 [[package]]

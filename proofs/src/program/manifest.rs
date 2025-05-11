@@ -298,7 +298,6 @@ impl OrigoManifest {
     //   &mut switchboard_inputs,
     // )?;
 
-
     debug!("rom: {:?}", rom);
     debug!("rom_data: {:?}", rom_data);
     for (i, input) in switchboard_inputs.iter_mut().enumerate() {

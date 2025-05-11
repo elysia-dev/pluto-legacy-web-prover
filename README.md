@@ -20,7 +20,9 @@ So We implemented a SuperNova interface that takes a noir file as input.
 
 We also do zk-tls attestation for the binance payment api, for which we implemented a manifest for that api.
 
-### Scripts
+## Getting Started
+
+### Run locally
 
 Run notary server
 
@@ -28,33 +30,34 @@ Run notary server
 cargo run -p notary -- --config ./fixture/notary-config.toml
 ```
 
-Run binance client (example)
-
-We used [Binance `/pay/transactions`](https://developers.binance.com/docs/pay/rest-api).
+Prove & verify a test api response `{"hello":"world"}`
 
 ```sh
-run -p client -- --config ./fixture/client.origo_tcp_local_binance.json --log-level=INFO --from-binance-id 93260646 --receiver-binance-id 71035696 --currency USDT --amount 1
+cargo run -p client -- --config ./fixture/client.origo_noir_tcp_local.json
 ```
 
-### To Run the demo
+### Run the demo
 
 The actual execution of this package is a bit complicated.
 We haven't implemented generating proofs in the browser yet, so calling it from the command line to generate/prove the proofs contains a lot of private data in the env, so We couldn't package it all at once and upload it.
 So you need to follow the steps below to reproduce the process shown in the demo.
 
-1. in genie vault(<https://github.com/elysia-dev/zk-vault>)
+1. In genie vault(<https://github.com/elysia-dev/zk-vault>)
    Deploy the vault. Make sure to put the private_key that will be used as the contract owner in the env.
 
-2. in legacy-web-prover
+2. In legacy-web-prover
    Put the generated vault address into MINATO_VAULT_ADDRESS in the env.
    Put the same private_key as used above into PRIVATE_KEY, NOTARY_PRIVATE_KEY.
 
-3. in Binance
+3. In Binance
    Get a Binance API.
-   Write the api_key to target_headers.x-mbx-apikey in fixture/client.origo_tcp_local_binance.json.
-   Write the secret to BINANCE_SECRET.
+   Write the api_key to target_headers.x-mbx-apikey in fixture/client.origo_tcp_local_binance.json. Write the secret to BINANCE_SECRET.
 
-4. in legacy-web-prover
+4. In legacy-web-prover
    In the script that calls client Replace receiver-binance-id with the ID of the BINANCE account that issued the API.
-   ex.
-   `cargo run -p client -- --config ./fixture/client.origo_tcp_local_binance.json --log-level=INFO --from-binance-id 93260646 --receiver-binance-id 71035696 --currency USDT --amount 1`
+
+  ```sh
+  cargo run -p client -- --config ./fixture/client.origo_tcp_local_binance.json \
+  --log-level=INFO --from-binance-id 93260646 --receiver-binance-id 71035696 \
+  --currency USDT --amount 1
+  ```
