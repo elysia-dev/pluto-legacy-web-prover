@@ -43,21 +43,18 @@ We haven't implemented generating proofs in the browser yet, so calling it from 
 So you need to follow the steps below to reproduce the process shown in the demo.
 
 1. In genie vault(<https://github.com/elysia-dev/zk-vault>)
-   Deploy the vault. Make sure to put the private_key that will be used as the contract owner in the env.
-
+   1. Deploy the vault. Make sure to put the private_key that will be used as the contract owner in the env.
 2. In legacy-web-prover
-   Put the generated vault address into MINATO_VAULT_ADDRESS in the env.
-   Put the same private_key as used above into PRIVATE_KEY, NOTARY_PRIVATE_KEY.
-
+   1. Put the generated vault address into MINATO_VAULT_ADDRESS in the env.
+   2. Put the same private_key as used above into PRIVATE_KEY, NOTARY_PRIVATE_KEY.
 3. In Binance
-   Get a Binance API.
-   Write the api_key to target_headers.x-mbx-apikey in fixture/client.origo_tcp_local_binance.json. Write the secret to BINANCE_SECRET.
-
+   1. Get a Binance API.
+   2. Write the api_key to target_headers.x-mbx-apikey in fixture/client.origo_tcp_local_binance.json.
+   3. Write the secret to BINANCE_SECRET.
 4. In legacy-web-prover
    In the script that calls client Replace receiver-binance-id with the ID of the BINANCE account that issued the API.
 
   ```sh
-  cargo run -p client -- --config ./fixture/client.origo_tcp_local_binance.json \
-  --log-level=INFO --from-binance-id 93260646 --receiver-binance-id 71035696 \
-  --currency USDT --amount 1
+  cargo run -p demo --bin demo -- --config ./fixture/client.origo_tcp_local_binance.json \
+  --log-level=INFO --from-binance-id 93260646 --receiver-binance-id 71035696 --amount 1 --currency USDT
   ```
